@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 import fujicv
 from fujicv.data.datasets import get_default_dataset
 from fujicv.data.transforms import get_train_transforms, get_val_transforms
 from fujicv.engine.trainer import Trainer
+from fujicv.losses.classification import CrossEntropyLoss
+from fujicv.metrics.classification import Accuracy
 from fujicv.models.builder import ModelBuilder
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -59,11 +60,8 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-4)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
 # ── Loss & metrics ────────────────────────────────────────────────────────────
-from fujicv.losses.classification import CrossEntropyLoss
-from fujicv.metrics.classification import accuracy
-
 loss_fn = CrossEntropyLoss()
-metrics = {"accuracy": accuracy}
+metrics = {"accuracy": Accuracy()}
 
 # ── Train ─────────────────────────────────────────────────────────────────────
 trainer = Trainer(

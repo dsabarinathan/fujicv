@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
@@ -61,8 +60,9 @@ def test_csv_image_dataset_skips_missing():
 
 
 def test_csv_image_dataset_regression():
-    from fujicv.data.datasets import CSVImageDataset
     import torch
+
+    from fujicv.data.datasets import CSVImageDataset
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)

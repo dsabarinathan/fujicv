@@ -18,9 +18,9 @@ def _reg_batch(n=8):
     return preds, targets
 
 
-def _ml_batch(n=8, l=5):
-    logits = torch.randn(n, l)
-    targets = torch.randint(0, 2, (n, l)).float()
+def _ml_batch(n=8, n_labels=5):
+    logits = torch.randn(n, n_labels)
+    targets = torch.randint(0, 2, (n, n_labels)).float()
     return logits, targets
 
 

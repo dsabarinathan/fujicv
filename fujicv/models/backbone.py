@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 import torch
 import torch.nn as nn
 
-
 _VIT_PATTERNS = re.compile(r"vit|swin|deit|beit|coatnet|pit|tnt|cait|xcit|twins")
 
 

@@ -7,13 +7,13 @@ name = "fujicv"
 version = "0.1.0"
 description = "Open-source Python package for image classification and regression built on timm + torchvision"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = { text = "Apache-2.0" }
 authors = [{ name = "FujiCV Contributors" }]
 keywords = ["deep-learning", "computer-vision", "image-classification", "timm", "pytorch"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -69,8 +69,10 @@ include = ["fujicv*"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
-select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501", "B007", "B008"]
 
 [tool.mypy]
 python_version = "3.9"

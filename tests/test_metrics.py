@@ -5,7 +5,6 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-
 # ---- Classification metrics -----------------------------------------------
 
 def test_accuracy_perfect():

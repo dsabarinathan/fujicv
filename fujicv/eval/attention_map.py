@@ -215,8 +215,6 @@ def generate_attention_grid(
 
     correct_items: List[Tuple] = []
     wrong_items: List[Tuple] = []
-    needed = n_correct + n_wrong
-
     with torch.no_grad():
         for images, labels in dataloader:
             images = images.to(dev)

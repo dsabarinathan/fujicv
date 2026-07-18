@@ -15,7 +15,6 @@ from pathlib import Path
 # Ensure the repo root is on the Python path when running from examples/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import torch
 import torch.optim as optim
 
 from fujicv.data.dataloader import build_dataloaders
@@ -137,7 +136,7 @@ def main(config_path: str) -> None:
         early_stopping_patience=train_cfg.get("early_stopping_patience"),
     )
 
-    history = trainer.train()
+    trainer.train()
     logger.info("Training finished. Best checkpoint saved to %s/best.pt", output_dir)
 
 

@@ -24,7 +24,6 @@ from fujicv.data.dataloader import build_dataloaders
 from fujicv.data.datasets import build_splits
 from fujicv.eval.attention_map import generate_attention_grid
 from fujicv.eval.curves import plot_pr_curve, plot_roc_curve
-from fujicv.eval.plots import plot_loss_curves
 from fujicv.eval.report import classification_report
 from fujicv.eval.tsne import extract_embeddings, plot_tsne
 from fujicv.models.builder import ModelBuilder
