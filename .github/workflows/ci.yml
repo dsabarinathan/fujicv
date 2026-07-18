@@ -48,15 +48,7 @@ jobs:
       - name: Scan for secrets
         run: |
           detect-secrets scan --baseline .secrets.baseline
-          python -c "
-import json, sys
-data = json.load(open('.secrets.baseline'))
-secrets = {f: v for f, v in data.get('results', {}).items() if v}
-if secrets:
-    print('Secrets found:', json.dumps(secrets, indent=2))
-    sys.exit(1)
-print('No secrets found.')
-"
+          python -c "import json,sys; d=json.load(open('.secrets.baseline')); s={f:v for f,v in d.get('results',{}).items() if v}; sys.exit(1) if s else print('No secrets found.')"
 
   test:
     name: Test (pytest)
