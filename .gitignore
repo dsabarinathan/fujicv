@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.so
+*.pyd
+
+# Environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Data & outputs
+data/
+runs/
+outputs/
+*.pt
+*.pth
+*.onnx
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Secrets scan baseline
+.secrets.baseline
+
+# W&B
+wandb/
+
+# OS
+.DS_Store
+Thumbs.db

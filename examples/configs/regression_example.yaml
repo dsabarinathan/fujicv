@@ -1,0 +1,54 @@
+dataset:
+  csv_path: data/train.csv
+  image_dir: data/images
+  image_col: filepath
+  label_col: score
+  task: regression
+  val_fraction: 0.15
+  test_fraction: 0.15
+  random_seed: 42
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  output_dir: outputs/regression
+
+augmentation:
+  image_size: 224
+  level: light
+
+model:
+  backbone_name: efficientnet_b0
+  backbone_source: timm
+  pretrained: true
+  task: regression
+  num_outputs: 1
+  custom_layers: []
+  head_kwargs:
+    dropout: 0.25
+  image_size: 224
+
+training:
+  epochs: 40
+  optimizer:
+    name: Adam
+    lr: 0.0001
+    weight_decay: 0.0001
+  scheduler:
+    name: ReduceLROnPlateau
+    mode: min
+    factor: 0.5
+    patience: 5
+  loss:
+    name: HuberLoss
+    kwargs:
+      delta: 1.0
+  mixed_precision: true
+  grad_clip: 1.0
+  monitor_metric: val_loss
+  early_stopping_patience: 15
+  output_dir: outputs/regression
+
+wandb:
+  use_wandb: false
+  project: fujicv-regression
+  entity: null

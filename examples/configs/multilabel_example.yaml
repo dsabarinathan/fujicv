@@ -1,0 +1,58 @@
+dataset:
+  csv_path: data/train.csv
+  image_dir: data/images
+  image_col: filepath
+  label_col: labels          # comma-separated 0/1 values per label
+  task: multilabel
+  val_fraction: 0.15
+  test_fraction: 0.15
+  random_seed: 42
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  output_dir: outputs/multilabel
+
+augmentation:
+  image_size: 224
+  level: heavy
+
+model:
+  backbone_name: convnext_small
+  backbone_source: timm
+  pretrained: true
+  task: multilabel
+  num_outputs: 20            # number of binary labels
+  custom_layers:
+    - type: LinearBNDropout
+      out_features: 1024
+      dropout: 0.3
+  head_kwargs:
+    dropout: 0.2
+  image_size: 224
+
+training:
+  epochs: 50
+  optimizer:
+    name: AdamW
+    lr: 0.0002
+    weight_decay: 0.01
+  scheduler:
+    name: OneCycleLR
+    max_lr: 0.001
+    pct_start: 0.1
+  loss:
+    name: AsymmetricLoss
+    kwargs:
+      gamma_pos: 0.0
+      gamma_neg: 4.0
+      clip: 0.05
+  mixed_precision: true
+  grad_clip: 1.0
+  monitor_metric: val_loss
+  early_stopping_patience: 15
+  output_dir: outputs/multilabel
+
+wandb:
+  use_wandb: false
+  project: fujicv-multilabel
+  entity: null

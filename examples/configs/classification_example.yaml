@@ -1,0 +1,56 @@
+dataset:
+  csv_path: data/train.csv
+  image_dir: data/images
+  image_col: filepath
+  label_col: label
+  task: classification
+  val_fraction: 0.15
+  test_fraction: 0.15
+  random_seed: 42
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  output_dir: outputs/classification
+
+augmentation:
+  image_size: 224
+  level: medium
+
+model:
+  backbone_name: resnet50
+  backbone_source: timm
+  pretrained: true
+  task: classification
+  num_outputs: 10
+  custom_layers:
+    - type: LinearBNDropout
+      out_features: 512
+      dropout: 0.3
+  head_kwargs:
+    dropout: 0.2
+  image_size: 224
+
+training:
+  epochs: 30
+  optimizer:
+    name: AdamW
+    lr: 0.0003
+    weight_decay: 0.01
+  scheduler:
+    name: CosineAnnealingLR
+    T_max: 30
+    eta_min: 0.000001
+  loss:
+    name: LabelSmoothingCE
+    kwargs:
+      smoothing: 0.1
+  mixed_precision: true
+  grad_clip: 1.0
+  monitor_metric: val_Accuracy
+  early_stopping_patience: 10
+  output_dir: outputs/classification
+
+wandb:
+  use_wandb: false
+  project: fujicv-classification
+  entity: null
