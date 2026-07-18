@@ -28,8 +28,8 @@ outputs/
 # Notebooks
 .ipynb_checkpoints/
 
-# Secrets scan baseline
-.secrets.baseline
+# Secrets scan baseline — must be committed so CI can compare against it
+!.secrets.baseline
 
 # W&B
 wandb/
