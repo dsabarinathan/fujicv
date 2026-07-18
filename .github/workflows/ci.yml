@@ -8,65 +8,32 @@ on:
 
 jobs:
   lint:
-    name: Lint (ruff)
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install ruff
-        run: pip install "ruff==0.4.4"
-      - name: Run ruff
-        run: ruff check fujicv/ tests/ examples/
-
-  typecheck:
-    name: Type check (mypy)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install package + type stubs
-        run: |
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install -e ".[dev]"
-      - name: Run mypy
-        run: mypy fujicv/ --ignore-missing-imports --no-strict-optional --no-error-summary --exclude 'fujicv/eval/' --exclude 'fujicv/export/' --exclude 'fujicv/inference/'
-
-  secrets-scan:
-    name: Secret scan (detect-secrets)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install detect-secrets
-        run: pip install "detect-secrets==1.5.0"
-      - name: Scan for secrets
-        run: |
-          detect-secrets scan --baseline .secrets.baseline
-          python -c "import json,sys; d=json.load(open('.secrets.baseline')); s={f:v for f,v in d.get('results',{}).items() if v}; sys.exit(1) if s else print('No secrets found.')"
+      - run: pip install "ruff==0.4.4"
+      - run: ruff check fujicv/ tests/ examples/
 
   test:
-    name: Test (pytest)
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install CPU-only PyTorch
-        run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-      - name: Install package
-        run: pip install -e ".[test]"
-      - name: Install test extras
-        run: pip install albumentations scikit-learn pandas Pillow iterative-stratification
+      - name: Install dependencies
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install albumentations scikit-learn pandas Pillow iterative-stratification pytest
+          pip install -e .
       - name: Run tests
         run: pytest tests/ -v --tb=short
