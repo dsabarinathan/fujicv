@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/fujicv/fujicv/actions/workflows/ci.yml/badge.svg)](https://github.com/fujicv/fujicv/actions)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 
 ---
 
@@ -197,4 +197,4 @@ See [SECURITY.md](SECURITY.md) for the full policy.  Key points:
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2024 FujiCV Contributors.
+[Apache 2.0](LICENSE) — Copyright (c) 2025 FujiCV Contributors.
