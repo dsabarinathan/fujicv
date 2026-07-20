@@ -4,6 +4,36 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.1.0] — 2026-07-20
+
+### New Features
+
+**Ordinal Regression Losses**
+- `CoralLoss` — CORAL ordinal regression (Cao et al., 2020); converts rank targets to binary tasks and applies BCE across `K-1` cumulative thresholds
+- `CornLoss` — CORN conditional ordinal regression (Shi et al., 2023); mask-based conditional training for each rank boundary
+- Both registered in `LOSS_REGISTRY` and selectable by name
+
+**Hyperparameter Optimisation**
+- New `fujicv.hpo` module with `run_hpo(objective_fn, n_trials, direction, study_name)` wrapper around Optuna
+- Optional dependency: `pip install "fujicv[hpo]"` installs `optuna>=3.0`
+- Raises a clean `ImportError` with install instructions when Optuna is absent
+
+**Multi-GPU Training**
+- `Trainer` now automatically wraps the model in `nn.DataParallel` when `torch.cuda.device_count() > 1`
+- Checkpoint saving correctly unwraps `.module` before serialisation
+
+**Backbone Example Scripts**
+- `examples/train_efficientnet.py` — EfficientNet-B0 on CIFAR-10 (224px, pretrained)
+- `examples/train_convnext.py` — ConvNeXt-Tiny on CIFAR-10 (224px, pretrained)
+- `examples/train_vit.py` — ViT-Tiny patch16/224 on CIFAR-10 (pretrained)
+
+**Colab Notebooks**
+- `examples/colab_cifar10.ipynb` — added attention map grid cell (cell 11b) using `generate_attention_grid`
+- `examples/colab_regression.ipynb` — ResNet-18 regression on synthetic brightness dataset; scatter plot + residual distribution
+- `examples/colab_multilabel.ipynb` — ResNet-18 multi-label on synthetic 5-label dataset; per-label AP bar chart + label co-occurrence heatmap
+
+---
+
 ## [1.0.0] — 2026-07-19
 
 First stable release. Validated end-to-end on MNIST (98.6% val accuracy, 5 epochs, CPU).

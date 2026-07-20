@@ -17,10 +17,10 @@ env/
 .vscode/
 .idea/
 
-# Data & outputs
-data/
-runs/
-outputs/
+# Data & outputs (top-level only, not fujicv/data/ source package)
+/data/
+/runs/
+/outputs/
 *.pt
 *.pth
 *.onnx
@@ -33,6 +33,9 @@ outputs/
 
 # W&B
 wandb/
+
+# Claude Code internal files
+.claude/
 
 # OS
 .DS_Store

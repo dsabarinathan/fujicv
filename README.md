@@ -3,6 +3,7 @@
 **Open-source Python package for image classification and regression, built on timm + torchvision.**
 
 [![CI](https://github.com/dsabarinathan/fujicv/actions/workflows/ci.yml/badge.svg)](https://github.com/dsabarinathan/fujicv/actions)
+[![PyPI](https://img.shields.io/pypi/v/fujicv)](https://pypi.org/project/fujicv/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 
@@ -20,11 +21,12 @@
   ImageNet normalisation, deterministic val transforms.
 - **CSVImageDataset** — reads any CSV-driven image dataset; pre-validates files,
   skips missing with a warning; supports classification, regression, multilabel.
-- **Loss functions** — 13 losses across classification, regression, and multilabel
-  tasks, all registered in `LOSS_REGISTRY`.
+- **Loss functions** — 15 losses across classification, regression, and multilabel
+  tasks, all registered in `LOSS_REGISTRY`. Includes CORAL and CORN ordinal regression losses.
 - **Metrics** — 16 metrics across all tasks, registered in `METRIC_REGISTRY`.
 - **Trainer** — AMP, gradient clipping, early stopping, best/last checkpointing,
-  history CSV.
+  history CSV. Multi-GPU via automatic `DataParallel` when multiple CUDA devices are present.
+- **HPO** — Optuna hyperparameter search via `fujicv.hpo.run_hpo`; install with `pip install "fujicv[hpo]"`.
 - **WandbLogger** — W&B integration via env-var only (`WANDB_API_KEY`); graceful
   no-op when W&B is absent.
 - **Evaluation** — confusion matrix, ROC/PR curves, t-SNE, Grad-CAM (CNN),

@@ -116,6 +116,11 @@ class Trainer:
         self.device = get_device(device)
         self.model.to(self.device)
 
+        # Wrap in DataParallel if multiple GPUs available
+        if self.device.type == "cuda" and torch.cuda.device_count() > 1:
+            logger.info("Using DataParallel across %d GPUs", torch.cuda.device_count())
+            self.model = nn.DataParallel(self.model)
+
         # AMP scaler (only for CUDA)
         self._use_amp = mixed_precision and self.device.type == "cuda"
         self._scaler = GradScaler(enabled=self._use_amp)
@@ -165,8 +170,9 @@ class Trainer:
         logger.info("Resumed from checkpoint %s (epoch %d)", path, self._start_epoch)
 
     def _save_last_checkpoint(self, epoch: int) -> None:
+        state = self.model.module.state_dict() if isinstance(self.model, nn.DataParallel) else self.model.state_dict()
         payload = {
-            "model_state_dict": self.model.state_dict(),
+            "model_state_dict": state,
             "optimizer_state_dict": self.optimizer.state_dict(),
             "epoch": epoch,
             "history": self.history,
@@ -254,9 +260,10 @@ class Trainer:
             logger.info("Epoch %d/%d  [%.1fs]  %s", epoch + 1, self.epochs, elapsed, metric_str)
 
             # Checkpoint
+            _model_to_save = self.model.module if isinstance(self.model, nn.DataParallel) else self.model
             self._ckpt.step(
                 epoch_metrics,
-                self.model,
+                _model_to_save,
                 extra={
                     "optimizer_state_dict": self.optimizer.state_dict(),
                     "epoch": epoch,
