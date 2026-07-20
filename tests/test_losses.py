@@ -165,3 +165,56 @@ def test_get_loss_unknown():
     from fujicv.losses import get_loss
     with pytest.raises(KeyError):
         get_loss("NonExistentLoss")
+
+
+# ---- Ordinal regression losses (v1.1.0) -----------------------------------
+
+def _ordinal_batch(n=8, num_classes=5):
+    """logits shape (N, K-1), targets shape (N,) int in [0, K-1]."""
+    logits = torch.randn(n, num_classes - 1)
+    targets = torch.randint(0, num_classes, (n,))
+    return logits, targets
+
+
+def test_coral_loss_shape():
+    from fujicv.losses.regression import CoralLoss
+    loss = CoralLoss(num_classes=5)
+    logits, targets = _ordinal_batch(num_classes=5)
+    out = loss(logits, targets)
+    assert out.ndim == 0
+    assert out.item() >= 0
+
+
+def test_coral_loss_zero_targets():
+    """All targets = 0 → all levels are 0 → loss = BCE(logits, zeros)."""
+    from fujicv.losses.regression import CoralLoss
+    loss = CoralLoss(num_classes=4)
+    logits = torch.zeros(6, 3)
+    targets = torch.zeros(6, dtype=torch.long)
+    out = loss(logits, targets)
+    assert out.item() >= 0
+
+
+def test_corn_loss_shape():
+    from fujicv.losses.regression import CornLoss
+    loss = CornLoss(num_classes=5)
+    logits, targets = _ordinal_batch(num_classes=5)
+    out = loss(logits, targets)
+    assert out.ndim <= 1
+    assert out.item() >= 0
+
+
+def test_coral_registered():
+    from fujicv.losses import get_loss
+    loss = get_loss("CoralLoss", {"num_classes": 3})
+    logits, targets = _ordinal_batch(num_classes=3)
+    out = loss(logits, targets)
+    assert out.item() >= 0
+
+
+def test_corn_registered():
+    from fujicv.losses import get_loss
+    loss = get_loss("CornLoss", {"num_classes": 4})
+    logits, targets = _ordinal_batch(num_classes=4)
+    out = loss(logits, targets)
+    assert out.item() >= 0
