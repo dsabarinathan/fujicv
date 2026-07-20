@@ -2,7 +2,7 @@
 
 **Open-source Python package for image classification and regression, built on timm + torchvision.**
 
-[![CI](https://github.com/fujicv/fujicv/actions/workflows/ci.yml/badge.svg)](https://github.com/fujicv/fujicv/actions)
+[![CI](https://github.com/dsabarinathan/fujicv/actions/workflows/ci.yml/badge.svg)](https://github.com/dsabarinathan/fujicv/actions)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 
@@ -192,6 +192,20 @@ See [SECURITY.md](SECURITY.md) for the full policy.  Key points:
    detect-secrets scan
    ```
 4. Open a pull request — CI will run automatically.
+
+---
+
+## Validated Results
+
+| Dataset | Model | Epochs | Device | Val Accuracy |
+|---------|-------|--------|--------|-------------|
+| MNIST | ResNet-18 (scratch) | 5 | CPU | **98.6%** |
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 ---
 
