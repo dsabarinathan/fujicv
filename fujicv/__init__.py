@@ -1,6 +1,6 @@
 """FujiCV — image classification and regression built on timm + torchvision."""
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "FujiCV Contributors"
 
 from fujicv.data.datasets import get_default_dataset  # noqa: F401

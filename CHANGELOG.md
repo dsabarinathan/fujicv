@@ -4,6 +4,23 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.2.0] — 2026-07-21
+
+### New Features
+
+**HuggingFace Datasets Integration**
+- New `fujicv.data.hf_dataset` module with `HFImageDataset` and `load_hf_dataset`
+- `HFImageDataset` — wraps any `datasets.Dataset` object; supports PIL images, file paths, and raw arrays; handles classification (int + string labels, HF `ClassLabel` feature), regression, and multi-label tasks
+- `load_hf_dataset(repo_id, ...)` — one-call download + split + wrap for any HuggingFace Hub dataset; automatically creates a val split if none exists
+- Auto class-to-idx from HF `ClassLabel` feature when available
+- Optional dependency: `pip install "fujicv[hf]"` installs `datasets>=2.14`
+- Example script: `examples/train_hf_beans.py` (3-class plant disease, ~1K images)
+
+**Bug Fixes**
+- `colab_multilabel.ipynb`: fixed wrong import paths (`BCEWithLogitsLoss` was imported from `losses.classification` instead of `losses.multilabel`; `HammingScore`/`MeanAveragePrecision` renamed to `HammingLoss`/`mAP`; `CSVImageDataset` import and constructor corrected)
+
+---
+
 ## [1.1.0] — 2026-07-20
 
 ### New Features
