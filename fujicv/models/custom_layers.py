@@ -5,6 +5,8 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from fujicv.models.stochastic_depth import DropPath  # noqa: F401 — re-exported
+
 
 class LinearBNDropout(nn.Module):
     """Linear → BatchNorm1d → ReLU → Dropout block.

@@ -22,6 +22,7 @@ def _build_timm_backbone(
     in_chans: int,
     features_only: bool,
     out_indices: Optional[List[int]],
+    drop_path_rate: Optional[float] = None,
 ) -> Dict[str, Any]:
     try:
         import timm
@@ -37,6 +38,8 @@ def _build_timm_backbone(
         kwargs["features_only"] = True
         if out_indices is not None:
             kwargs["out_indices"] = out_indices
+    if drop_path_rate is not None and drop_path_rate > 0.0:
+        kwargs["drop_path_rate"] = drop_path_rate
 
     model = timm.create_model(name, **kwargs)
 
@@ -132,6 +135,7 @@ def build_backbone(
     in_chans: int = 3,
     features_only: bool = False,
     out_indices: Optional[List[int]] = None,
+    drop_path_rate: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Build a backbone model from timm or torchvision.
 
@@ -155,7 +159,7 @@ def build_backbone(
     """
     source = source.lower()
     if source == "timm":
-        return _build_timm_backbone(name, pretrained, in_chans, features_only, out_indices)
+        return _build_timm_backbone(name, pretrained, in_chans, features_only, out_indices, drop_path_rate)
     elif source == "torchvision":
         if features_only:
             raise ValueError("features_only is not supported for source='torchvision'")

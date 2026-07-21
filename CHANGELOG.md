@@ -4,6 +4,39 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.4.0] — 2026-07-22
+
+### New Features
+
+**Stochastic Depth (DropPath)**
+- New `fujicv.models.stochastic_depth` module with `DropPath` layer and `build_stochastic_depth_schedule`
+- `DropPath(drop_prob)` drops entire residual branches per-sample during training; identity at eval
+- `build_stochastic_depth_schedule(num_stages, max_drop_rate)` returns linearly-spaced rates for stacked models
+- Integrated into `ModelBuilder` via `drop_path_rate` kwarg — passed through to timm natively
+- Re-exported from `fujicv.models.custom_layers` for convenience
+- 11 unit tests covering identity, drop behaviour, shape, invalid prob, schedule, and builder integration
+
+**Knowledge Distillation**
+- New `fujicv.losses.distillation` module with `DistillationLoss` and `FeatureDistillationLoss`
+- `DistillationLoss(alpha, temperature)` — Hinton-style soft + hard loss; KL divergence scaled by T²
+- `FeatureDistillationLoss(projector)` — MSE between student and teacher feature maps with optional projection layer
+- Both losses registered in the LOSS_REGISTRY; retrievable via `get_loss("DistillationLoss", {...})`
+- New `fujicv.engine.distillation_trainer.DistillationTrainer` — extends `Trainer` with teacher freezing, teacher forward pass, and distillation loss dispatch
+- Teacher is automatically frozen and moved to device at construction; raises `TypeError` early if wrong loss type
+- Supports full AMP, grad clipping, checkpointing — same as base `Trainer`
+- 14 unit tests covering losses, registry, backward pass, trainer smoke, wrong-loss rejection, teacher frozen
+
+**K-Fold Cross Validation**
+- New `fujicv.training.kfold.KFoldTrainer` for robust model evaluation
+- Factory pattern: `model_factory`, `dataset_factory`, `trainer_factory` — caller controls all hyperparameters
+- Uses `StratifiedKFold` (set `stratify_col`) or plain `KFold` from scikit-learn
+- Per-fold checkpoints saved under `<output_dir>/fold_N/`
+- Returns `fold_histories`, `fold_metrics`, `summary` (DataFrame with mean/std/min/max), `oof_preds`, `oof_targets`
+- OOF predictions initialised lazily — no need to specify logit dim in advance
+- 5 unit tests covering fold count, summary shape, OOF coverage, directory creation, missing sklearn error
+
+---
+
 ## [1.3.0] — 2026-07-21
 
 ### New Features

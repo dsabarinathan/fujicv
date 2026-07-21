@@ -87,6 +87,7 @@ class ModelBuilder:
         num_outputs: int = 2,
         head_kwargs: Optional[Dict[str, Any]] = None,
         image_size: int = 224,
+        drop_path_rate: float = 0.0,
     ) -> None:
         if task not in _VALID_TASKS:
             raise ValueError(f"task must be one of {sorted(_VALID_TASKS)}, got {task!r}")
@@ -99,6 +100,7 @@ class ModelBuilder:
         self.num_outputs = num_outputs
         self.head_kwargs = head_kwargs or {}
         self.image_size = image_size
+        self.drop_path_rate = drop_path_rate
 
     def build(self) -> _AssembledModel:
         """Build and validate the assembled model.
@@ -113,6 +115,7 @@ class ModelBuilder:
             name=self.backbone_name,
             source=self.backbone_source,
             pretrained=self.pretrained,
+            drop_path_rate=self.drop_path_rate if self.drop_path_rate > 0.0 else None,
         )
         backbone: nn.Module = bb["model"]
         out_features: int = bb["out_features"]
