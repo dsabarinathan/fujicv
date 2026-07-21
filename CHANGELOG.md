@@ -4,6 +4,28 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.3.0] — 2026-07-21
+
+### New Features
+
+**Test-Time Augmentation (TTA)**
+- New `fujicv.inference.tta` module with `TTAPredictor` and `tta_predict`
+- `TTAPredictor` wraps any trained model and averages predictions over multiple augmented views
+- 7 built-in augmentation presets: `hflip` (2 views), `hflip_vflip` (3), `rotate` (4), `hflip_rotate` (5), `brightness` (3), `standard` (6), `full` (8)
+- Custom augments supported: pass any list of `fn(np.ndarray) -> np.ndarray` callables
+- Two merge strategies: `mean` (default) and `max` over probability distributions
+- Supports all three tasks: classification, regression, multilabel
+- Three prediction entry points: `predict(image)`, `predict_dataset(paths)`, `predict_batch(dataloader)`
+- `predict_proba()` returns raw probability array for downstream ensembling
+- `tta_predict()` one-shot convenience function (no class instantiation needed)
+- Exported from `fujicv.inference`: `from fujicv.inference import TTAPredictor, tta_predict`
+- 18 unit tests, all passing
+
+**Other**
+- `Registry` added to `fujicv.__all__` for cleaner public API
+
+---
+
 ## [1.2.0] — 2026-07-21
 
 ### New Features
