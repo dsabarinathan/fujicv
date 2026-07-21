@@ -4,6 +4,51 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.5.0] — 2026-07-22
+
+### New Features
+
+**Mixup / CutMix Batch Augmentation**
+- New `fujicv.data.mixup` module with `MixupCollator`, `CutMixCollator`, `MixupCutMixCollator`
+- Drop-in `collate_fn` for any DataLoader — no changes to dataset or model needed
+- `MixupCollator`: linearly interpolates image pairs and soft labels (Zhang et al., 2018)
+- `CutMixCollator`: cuts and pastes random rectangular patches, mixes labels by patch area (Yun et al., 2019)
+- `MixupCutMixCollator`: randomly selects Mixup or CutMix each batch with configurable per-method probability
+- All collators output one-hot soft targets compatible with cross-entropy or BCE losses
+- Exported from `fujicv.data`; 11 unit tests
+
+**EMA (Exponential Moving Average)**
+- New `fujicv.training.ema.ModelEMA` — shadow weight tracker for SOTA training pipelines
+- Bias-corrected warmup schedule for the first N steps (timm/EfficientNet style)
+- `update(model)` — call after every optimizer step
+- `average_parameters(model)` context manager — swaps EMA weights in for eval, restores on exit
+- `apply_to(model)` — permanently overwrite model with EMA weights
+- `state_dict` / `load_state_dict` for checkpoint serialisation
+- Exported from `fujicv.training`; 8 unit tests
+
+**LR Warmup + Advanced Schedulers**
+- New `fujicv.training.schedulers` module with `linear_warmup_schedule`, `cosine_with_warmup`, `get_scheduler`
+- `cosine_with_warmup`: ViT/Swin recipe — linear ramp then cosine decay, configurable min LR ratio
+- `linear_warmup_schedule`: chain any scheduler after warmup via `SequentialLR`
+- `get_scheduler(name, optimizer, ...)`: factory supporting `cosine`, `cosine_warmup`, `step`, `onecycle`, `plateau`, `linear_warmup`
+- Exported from `fujicv.training`; 11 unit tests
+
+**Layer-wise LR Decay (LLRD)**
+- New `fujicv.training.llrd.get_layer_wise_lr_params` — builds AdamW param groups with per-layer LR
+- Infers layer depth from `blocks.N`, `layer.N`, `stage.N` naming patterns; handles stem, head, and bias/norm no-decay
+- `decay_rate` controls how steeply LR falls toward the input (typical: 0.65–0.85)
+- `print_llrd_summary(param_groups)` pretty-prints LR/WD/count table
+- Exported from `fujicv.training`; 6 unit tests
+
+**Model Calibration**
+- New `fujicv.eval.calibration` module
+- `compute_ece(confidences, correct, n_bins)` — Expected Calibration Error metric
+- `TemperatureScaling` — post-hoc calibration; `fit(model, val_loader)` learns T via LBFGS on NLL; `calibrate(logits)` returns calibrated probabilities
+- `reliability_diagram(confidences, correct)` — bar chart vs diagonal with ECE annotation, save or display
+- Exported from `fujicv.eval`; 9 unit tests
+
+---
+
 ## [1.4.0] — 2026-07-22
 
 ### New Features

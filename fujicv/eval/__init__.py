@@ -1,6 +1,7 @@
 """Evaluation utilities: reports, curves, t-SNE, attention maps."""
 
 from fujicv.eval.attention_map import generate_attention_grid
+from fujicv.eval.calibration import TemperatureScaling, compute_ece, reliability_diagram  # noqa: F401
 from fujicv.eval.curves import plot_pr_curve, plot_roc_curve
 from fujicv.eval.plots import plot_loss_curves, plot_metric_curves
 from fujicv.eval.report import classification_report
@@ -15,4 +16,7 @@ __all__ = [
     "plot_tsne",
     "extract_embeddings",
     "generate_attention_grid",
+    "TemperatureScaling",
+    "compute_ece",
+    "reliability_diagram",
 ]
