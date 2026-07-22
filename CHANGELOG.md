@@ -4,6 +4,48 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.6.0] — 2026-07-22
+
+### New Features
+
+**Grad-CAM / Grad-CAM++ (Explainability)**
+- New `fujicv.eval.gradcam` module with `GradCAM`, `GradCAMPlusPlus`, `overlay_heatmap`
+- `GradCAM(model, target_layer)` — hooks any conv layer; `.generate(image)` → (H, W) heatmap in [0, 1]
+- `GradCAMPlusPlus` — improved localization using second-order gradients (Chattopadhyay et al., 2018)
+- `overlay_heatmap(image, heatmap, alpha)` — blends JET colormap onto original image (requires opencv)
+- Accepts raw numpy images or pre-processed tensors; auto-resizes output to input dimensions
+- Exported from `fujicv.eval`; 6 unit tests
+
+**Ensemble Prediction**
+- New `fujicv.inference.ensemble.EnsemblePredictor` — combine any number of models
+- Four merge strategies: `mean`, `vote` (majority), `max` (element-wise), `weighted_mean`
+- Supports classification, regression, and multilabel tasks
+- `predict(image)`, `predict_proba(image)`, `predict_batch(loader, return_targets=True)`
+- Exported from `fujicv.inference`; 11 unit tests
+
+**SAM Optimizer (Sharpness-Aware Minimization)**
+- New `fujicv.training.sam.SAM` — wraps any base optimizer (SGD, AdamW, …)
+- Explicit two-step API: `first_step()` → perturb, `second_step()` → restore + update
+- Adaptive SAM (ASAM) mode via `adaptive=True` — per-parameter magnitude normalization
+- Compatible with gradient clipping and AMP
+- Exported from `fujicv.training`; 7 unit tests
+
+**Confusion Matrix + Per-class Metrics**
+- New `fujicv.eval.confusion` module with `plot_confusion_matrix` and `per_class_metrics`
+- `plot_confusion_matrix` — normalized or raw counts, custom class names, save to file
+- `per_class_metrics` — returns DataFrame with precision, recall, F1, support per class
+- Exported from `fujicv.eval`; 8 unit tests
+
+**RandAugment**
+- New `fujicv.data.autoaugment` module with `RandAugment` and `RandAugmentTransform`
+- `RandAugment(n, magnitude)` — randomly selects N ops from a 14-operation bank (Cubuk et al., 2019)
+- Ops include rotate, shear, translate, solarize, posterize, sharpness, color, brightness, contrast, equalize
+- `RandAugmentTransform` — albumentations-compatible `__call__(image=...) → dict` wrapper
+- `magnitude_std` for stochastic magnitude sampling; `prob` to gate per-batch
+- Exported from `fujicv.data`; 10 unit tests
+
+---
+
 ## [1.5.0] — 2026-07-22
 
 ### New Features
