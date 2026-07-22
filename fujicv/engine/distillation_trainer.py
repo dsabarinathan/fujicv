@@ -128,10 +128,11 @@ class DistillationTrainer(Trainer):
         preds_np   = np.concatenate(all_preds)
         targets_np = np.concatenate(all_targets)
 
-        result = {"loss": avg_loss}
+        prefix = "train" if training else "val"
+        result = {f"{prefix}_loss": avg_loss}
         for name, metric_fn in self.metrics.items():
             try:
-                result[name] = float(metric_fn(targets_np, preds_np))
+                result[f"{prefix}_{name}"] = float(metric_fn(targets_np, preds_np))
             except Exception:
-                result[name] = float("nan")
+                result[f"{prefix}_{name}"] = float("nan")
         return result

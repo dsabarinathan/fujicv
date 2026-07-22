@@ -4,6 +4,33 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.7.0] — 2026-07-22
+
+### Bug Fixes
+
+- **`training/sam.py`** — ASAM adaptive perturbation used `w²` instead of `|w|`.  The ASAM paper (Kwon et al., 2021) defines the perturbation as `|w| * grad / ‖|w| * grad‖`.  Fixed `torch.pow(p, 2)` → `torch.abs(p)`.
+- **`data/mixup.py`** — `_rand_bbox` used `random.randint(0, W)` which is inclusive on both ends; `cx` could equal `W`, producing a degenerate zero-area patch at the right/bottom edge.  Fixed to `random.randint(0, W - 1)` and `random.randint(0, H - 1)`.
+- **`engine/distillation_trainer.py`** — `_run_epoch` returned bare keys `"loss"` and `"<metric>"` instead of the `"train_loss"` / `"val_loss"` convention used by the base `Trainer`.  This silently broke `CheckpointCallback` (monitor key never matched) and `EarlyStopping`.  Fixed by prepending `"train_"` / `"val_"` prefix.
+- **`inference/ensemble.py`** — `predict()` with `merge='vote'` called `_forward_all()` twice (once inside `_merge()` and again explicitly), doubling inference cost.  Fixed by caching the single `_forward_all` result and passing it to `_merge`.
+- **`training/kfold.py`** — `trainer.output_dir` was overridden per-fold but `trainer._ckpt.output_dir` (set at `Trainer.__init__` time) still pointed to the original directory.  Best checkpoints were written to the wrong folder.  Fixed by also updating `trainer._ckpt.output_dir`.
+
+### New Features
+
+**EMA integrated into Trainer**
+- `Trainer` now accepts `use_ema=True`, `ema_decay`, and `ema_warmup_steps` kwargs
+- When enabled, `ModelEMA.update()` is called automatically after every optimizer step
+- Validation runs use EMA shadow weights (via `average_parameters` context manager)
+- EMA state is saved to `best.pt` under the `"ema_state_dict"` key for reproducibility
+- 5 unit tests
+
+**WeightedRandomSampler factory (class-imbalance-aware)**
+- New `fujicv.data.sampler` module with `make_weighted_sampler` and `class_weights_from_labels`
+- `make_weighted_sampler(labels)` — inverse-frequency weights, drop-in `sampler=` for DataLoader
+- `class_weights_from_labels(labels)` — normalized tensor for `CrossEntropyLoss(weight=...)`
+- Exported from `fujicv.data`; 10 unit tests
+
+---
+
 ## [1.6.0] — 2026-07-22
 
 ### New Features

@@ -177,9 +177,12 @@ class KFoldTrainer:
 
             # Build trainer (caller sets output_dir, epochs, etc.)
             trainer = self.trainer_factory(model, train_loader, val_loader)
-            # Override output_dir so each fold gets its own checkpoint
+            # Override output_dir and resync CheckpointCallback so best.pt
+            # lands in the fold directory, not the original output_dir.
             trainer.output_dir = fold_dir
             trainer.output_dir.mkdir(parents=True, exist_ok=True)
+            trainer._ckpt.output_dir = fold_dir
+            trainer._ckpt.output_dir.mkdir(parents=True, exist_ok=True)
 
             history = trainer.train()
             fold_histories.append(history)

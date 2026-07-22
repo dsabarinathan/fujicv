@@ -131,12 +131,12 @@ class EnsemblePredictor:
             int class index (classification), float value (regression),
             or 1-D numpy array of binary labels (multilabel).
         """
-        merged = self._merge(self._forward_all(image))   # (1, C) or (1,)
+        stacked = self._forward_all(image)        # run once, reuse below
+        merged  = self._merge(stacked)            # (1, C) or (1,)
 
         if self.task == "classification":
             if self.merge == "vote":
-                stacked = self._forward_all(image)
-                preds   = stacked.argmax(dim=-1).squeeze(1)   # (M,)
+                preds = stacked.argmax(dim=-1).squeeze(1)   # (M,)
                 return int(torch.mode(preds).values.item())
             return int(merged.argmax(dim=-1).item())
 

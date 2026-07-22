@@ -17,8 +17,8 @@ def _rand_bbox(size: Tuple[int, ...], lam: float) -> Tuple[int, int, int, int]:
     cut_ratio = math.sqrt(1.0 - lam)
     cut_h = int(H * cut_ratio)
     cut_w = int(W * cut_ratio)
-    cx = random.randint(0, W)
-    cy = random.randint(0, H)
+    cx = random.randint(0, W - 1)   # randint is inclusive; avoid cx == W
+    cy = random.randint(0, H - 1)
     x1 = max(cx - cut_w // 2, 0)
     y1 = max(cy - cut_h // 2, 0)
     x2 = min(cx + cut_w // 2, W)

@@ -96,6 +96,9 @@ class Trainer:
         resume_from: Optional[str | Path] = None,
         early_stopping_patience: Optional[int] = None,
         class_to_idx: Optional[Dict[str, int]] = None,
+        use_ema: bool = False,
+        ema_decay: float = 0.9999,
+        ema_warmup_steps: int = 2000,
     ) -> None:
         self.model = model
         self.train_loader = train_loader
@@ -148,6 +151,13 @@ class Trainer:
                 monitor=monitor_metric,
                 mode=monitor_mode,
             )
+
+        # EMA
+        self._ema = None
+        if use_ema:
+            from fujicv.training.ema import ModelEMA
+            self._ema = ModelEMA(self.model, decay=ema_decay, warmup_steps=ema_warmup_steps)
+            logger.info("EMA enabled (decay=%.4f, warmup=%d)", ema_decay, ema_warmup_steps)
 
         self._start_epoch = 0
         self.history = History()
@@ -209,6 +219,8 @@ class Trainer:
                         nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self._scaler.step(self.optimizer)
                     self._scaler.update()
+                    if self._ema is not None:
+                        self._ema.update(self.model)
 
                 total_loss += loss.item() * images.size(0)
                 all_preds.append(logits.detach().cpu().numpy())
@@ -251,7 +263,12 @@ class Trainer:
         for epoch in range(self._start_epoch, self.epochs):
             t0 = time.time()
             train_metrics = self._run_epoch(self.train_loader, training=True)
-            val_metrics = self._run_epoch(self.val_loader, training=False)
+            # Validate with EMA shadow weights when EMA is active
+            if self._ema is not None:
+                with self._ema.average_parameters(self.model):
+                    val_metrics = self._run_epoch(self.val_loader, training=False)
+            else:
+                val_metrics = self._run_epoch(self.val_loader, training=False)
             epoch_metrics = {**train_metrics, **val_metrics}
             self.history.update(epoch_metrics)
 
@@ -261,16 +278,15 @@ class Trainer:
 
             # Checkpoint
             _model_to_save = self.model.module if isinstance(self.model, nn.DataParallel) else self.model
-            self._ckpt.step(
-                epoch_metrics,
-                _model_to_save,
-                extra={
-                    "optimizer_state_dict": self.optimizer.state_dict(),
-                    "epoch": epoch,
-                    "history": self.history,
-                    "class_to_idx": self.class_to_idx,
-                },
-            )
+            _extra = {
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "epoch": epoch,
+                "history": self.history,
+                "class_to_idx": self.class_to_idx,
+            }
+            if self._ema is not None:
+                _extra["ema_state_dict"] = self._ema.state_dict()
+            self._ckpt.step(epoch_metrics, _model_to_save, extra=_extra)
             self._save_last_checkpoint(epoch)
 
             # LR scheduler
