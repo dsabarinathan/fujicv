@@ -4,6 +4,38 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.8.0] — 2026-07-28
+
+### New Features
+
+**LR Finder** (`fujicv.training.LRFinder`)
+- Exponential range-test (Smith 2015 / fast.ai style) to identify optimal learning rate before training.
+- `range_test(loader, start_lr, end_lr, num_iter)` — runs the sweep, then auto-restores model and optimizer state.
+- `suggestion()` — returns the LR at the steepest loss descent.
+- `plot()` — smoothed loss-vs-LR curve with suggested LR marked.
+
+**Stochastic Weight Averaging** (`fujicv.training.SWA`)
+- Wraps `torch.optim.swa_utils.AveragedModel` with a clean API: `update()` / `finalize(loader)`.
+- `get_scheduler(optimizer)` — returns a `SWALR` cosine annealing scheduler.
+- `state_dict()` / `load_state_dict()` for checkpointing.
+
+**TorchScript export** (`fujicv.export.export_torchscript`)
+- `export_torchscript(model, path, example_inputs, method='trace')` — trace or script export.
+- `verify_torchscript(scripted, inputs, original_model)` — numerical output check.
+- `load_torchscript(path)` — reload saved `ScriptModule`.
+
+**ONNX quantization** (`fujicv.export.quantize_onnx`)
+- Post-training dynamic INT8 quantization via `onnxruntime.quantization`.
+- `quantize_onnx(onnx_path, output_path, quantize_type='dynamic', per_channel=False)`.
+- Reduces model size and speeds up CPU inference with no calibration data needed.
+
+**Optuna HPO enhancements** (`fujicv.hpo.run_hpo`)
+- `run_hpo` now accepts `pruner` (`'median'`, `'hyperband'`, `'percentile'`, `'successive_halving'`) and `pruner_kwargs`.
+- `plot_optimization_history(study)` — scatter + best-so-far line chart.
+- `plot_param_importances(study)` — horizontal bar chart of hyperparameter importances.
+
+---
+
 ## [1.7.0] — 2026-07-22
 
 ### Bug Fixes

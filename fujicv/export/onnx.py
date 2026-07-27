@@ -1,10 +1,10 @@
-"""ONNX export and verification utilities."""
+"""ONNX export, verification, and quantization utilities."""
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -116,3 +116,72 @@ def verify_onnx(
             "ONNX verification FAILED. Max absolute difference: %.6f", max_diff
         )
     return match
+
+
+def quantize_onnx(
+    onnx_path: Union[str, Path],
+    output_path: Union[str, Path],
+    quantize_type: str = "dynamic",
+    per_channel: bool = False,
+    nodes_to_exclude: Optional[list] = None,
+) -> Path:
+    """Quantize an ONNX model for faster CPU inference.
+
+    Supports *dynamic* quantization (weight-only, no calibration data needed)
+    and *static* quantization placeholder (dynamic is the practical default for
+    most CV models without a calibration dataset).
+
+    Args:
+        onnx_path: Input ``.onnx`` file path.
+        output_path: Destination path for the quantized ``.onnx`` file.
+        quantize_type: ``'dynamic'`` (default) or ``'static'``.
+            Static quantization requires a calibration dataset; use the
+            ``onnxruntime.quantization`` API directly for that workflow.
+        per_channel: Apply per-channel quantization for Conv/MatMul weights
+            (slightly better accuracy, slightly slower on some runtimes).
+        nodes_to_exclude: List of ONNX node names to skip during quantization.
+
+    Returns:
+        Path to the quantized ONNX file.
+
+    Raises:
+        ImportError: If ``onnxruntime`` extras are not installed
+            (``pip install fujicv[onnx]``).
+        ValueError: If *quantize_type* is not ``'dynamic'`` or ``'static'``.
+
+    Example::
+
+        from fujicv.export.onnx import to_onnx, quantize_onnx
+
+        to_onnx(model, "model.onnx")
+        quantize_onnx("model.onnx", "model_quantized.onnx")
+    """
+    try:
+        from onnxruntime.quantization import (  # type: ignore
+            QuantType,
+            quantize_dynamic,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "onnxruntime-tools are required for quantization. "
+            "Install with: pip install fujicv[onnx]"
+        ) from exc
+
+    if quantize_type not in ("dynamic", "static"):
+        raise ValueError(f"quantize_type must be 'dynamic' or 'static', got '{quantize_type}'")
+
+    onnx_path   = Path(onnx_path)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    weight_type = QuantType.QInt8
+
+    quantize_dynamic(
+        model_input=str(onnx_path),
+        model_output=str(output_path),
+        per_channel=per_channel,
+        weight_type=weight_type,
+        nodes_to_exclude=nodes_to_exclude or [],
+    )
+    logger.info("Quantized ONNX model saved to: %s", output_path)
+    return output_path
