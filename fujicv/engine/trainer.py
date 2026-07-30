@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 import time
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -99,6 +101,7 @@ class Trainer:
         use_ema: bool = False,
         ema_decay: float = 0.9999,
         ema_warmup_steps: int = 2000,
+        use_ddp: bool = False,
     ) -> None:
         self.model = model
         self.train_loader = train_loader
@@ -116,13 +119,28 @@ class Trainer:
         self.monitor_metric = monitor_metric
         self.class_to_idx = class_to_idx or {}
 
-        self.device = get_device(device)
-        self.model.to(self.device)
-
-        # Wrap in DataParallel if multiple GPUs available
-        if self.device.type == "cuda" and torch.cuda.device_count() > 1:
-            logger.info("Using DataParallel across %d GPUs", torch.cuda.device_count())
-            self.model = nn.DataParallel(self.model)
+        self._is_ddp = False
+        if use_ddp:
+            # Must be launched via: torchrun --nproc_per_node=N script.py
+            if not torch.distributed.is_initialized():
+                torch.distributed.init_process_group(backend="nccl")
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            self.device = torch.device(f"cuda:{local_rank}")
+            self.model.to(self.device)
+            self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[local_rank])
+            self._is_ddp = True
+            logger.info("DDP enabled on cuda:%d (world_size=%d)", local_rank, torch.distributed.get_world_size())
+        else:
+            self.device = get_device(device)
+            self.model.to(self.device)
+            if self.device.type == "cuda" and torch.cuda.device_count() > 1:
+                warnings.warn(
+                    f"{torch.cuda.device_count()} GPUs detected but use_ddp=False. "
+                    "For multi-GPU training launch with: torchrun --nproc_per_node=N script.py "
+                    "and pass use_ddp=True to Trainer. Continuing on a single GPU.",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         # AMP scaler (only for CUDA)
         self._use_amp = mixed_precision and self.device.type == "cuda"
@@ -166,6 +184,18 @@ class Trainer:
             self._load_checkpoint(Path(resume_from))
 
     # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def _model_core(self) -> nn.Module:
+        """Unwrap DDP (or legacy DataParallel) to get the underlying nn.Module."""
+        m = self.model
+        if isinstance(m, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
+            return m.module  # type: ignore[return-value]
+        return m
+
+    # ------------------------------------------------------------------
     # Checkpoint I/O
     # ------------------------------------------------------------------
 
@@ -180,7 +210,7 @@ class Trainer:
         logger.info("Resumed from checkpoint %s (epoch %d)", path, self._start_epoch)
 
     def _save_last_checkpoint(self, epoch: int) -> None:
-        state = self.model.module.state_dict() if isinstance(self.model, nn.DataParallel) else self.model.state_dict()
+        state = self._model_core.state_dict()
         payload = {
             "model_state_dict": state,
             "optimizer_state_dict": self.optimizer.state_dict(),
@@ -277,7 +307,7 @@ class Trainer:
             logger.info("Epoch %d/%d  [%.1fs]  %s", epoch + 1, self.epochs, elapsed, metric_str)
 
             # Checkpoint
-            _model_to_save = self.model.module if isinstance(self.model, nn.DataParallel) else self.model
+            _model_to_save = self._model_core
             _extra = {
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "epoch": epoch,

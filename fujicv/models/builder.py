@@ -49,9 +49,11 @@ class _AssembledModel(nn.Module):
             # CNN spatial features (B, C, H, W) → (B, C)
             feats = self._pool(feats).flatten(1)
         elif feats.dim() == 3:
-            # ViT patch tokens (B, N, C) — take CLS or mean
-            feats = feats[:, 0] if feats.shape[1] > 1 else feats.squeeze(1)
-        # else already (B, C) — num_classes=0 timm models do global pooling
+            # Transformer patch tokens (B, N, C) returned when global_pool=''.
+            # Mean over the sequence dimension is architecture-agnostic and
+            # avoids hard-coding CLS position (which varies across ViT variants).
+            feats = feats.mean(dim=1)
+        # else already (B, C) — timm with num_classes=0 does pooling internally
 
         feats = self.custom_layers(feats)
         return self.head(feats)

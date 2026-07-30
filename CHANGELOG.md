@@ -4,6 +4,39 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.9.0] — 2026-07-30
+
+### Bug Fixes & Robustness
+
+- **`engine/trainer.py`** — Replaced silent `nn.DataParallel` auto-wrap with proper
+  `DistributedDataParallel` (DDP) support.  Pass `use_ddp=True` to `Trainer` when
+  launching via `torchrun`.  On single-GPU or CPU, a clear `UserWarning` is emitted
+  if multiple GPUs are detected but `use_ddp=False`.  Added `_model_core` property
+  that unwraps both DDP and legacy DataParallel uniformly in checkpoint saving.
+- **`models/builder.py`** — Fixed fragile ViT feature extraction: the 3-D branch
+  `(B, N, C)` now uses `feats.mean(dim=1)` instead of `feats[:, 0]`.  Mean pooling
+  over the token sequence is architecture-agnostic and avoids hard-coding CLS position
+  (which varies across ViT variants and is not guaranteed for CAIT, XCiT, etc.).
+
+### New: Integration Tests
+
+- `tests/test_integration.py` — 6 end-to-end tests covering:
+  - `best.pt`, `last.pt`, `history.csv` artifact creation after 2-epoch run.
+  - Checkpoint loadability and key validation.
+  - `history.csv` column correctness.
+  - `resume_from` continuity (cumulative history).
+  - `early_stopping_patience` halt verification (frozen model, patience=1).
+  - Single-GPU / CPU `use_ddp=False` safety.
+
+### New: Community Files
+
+- `CONTRIBUTING.md` — dev environment setup, test/lint commands, branching model,
+  feature-addition checklist, and security policy.
+- `.pre-commit-config.yaml` — enforces `ruff` linting + formatting, standard file
+  hygiene hooks, and `detect-secrets` on every commit.
+
+---
+
 ## [1.8.0] — 2026-07-28
 
 ### New Features
