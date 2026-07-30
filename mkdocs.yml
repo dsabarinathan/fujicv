@@ -1,0 +1,89 @@
+site_name: FujiCV
+site_url: https://dsabarinathan.github.io/fujicv
+site_description: Lightweight image classification & regression for PyTorch
+site_author: Sabarinathan
+repo_url: https://github.com/dsabarinathan/fujicv
+repo_name: dsabarinathan/fujicv
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - Guides:
+    - Classification: guides/classification.md
+    - Regression: guides/regression.md
+    - Multi-Label: guides/multilabel.md
+    - Multi-GPU (DDP): guides/ddp.md
+    - HPO with Optuna: guides/hpo.md
+    - Grad-CAM & Explainability: guides/explainability.md
+    - Export & Deployment: guides/export.md
+    - Kaggle Recipes: guides/kaggle.md
+  - API Reference:
+    - ModelBuilder: api/builder.md
+    - Trainer: api/trainer.md
+    - Losses: api/losses.md
+    - Metrics: api/metrics.md
+    - LR Finder: api/lr_finder.md
+    - SWA: api/swa.md
+    - HPO: api/hpo.md
+    - Export: api/export.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dsabarinathan/fujicv
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/fujicv/
