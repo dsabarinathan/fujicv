@@ -101,7 +101,7 @@ class GradCAM:
         if target_class is None:
             target_class = int(logits.argmax(dim=1).item())
 
-        score = logits[0, target_class]
+        score = logits[0, target_class] if logits.ndim == 2 else logits[0]
         self.model.zero_grad()
         score.backward()
 
@@ -112,6 +112,8 @@ class GradCAM:
 
         # Normalise to [0, 1]
         cam = cam.squeeze().cpu().numpy()
+        if cam.ndim == 0:
+            cam = cam.reshape(1, 1)
         cam = cam - cam.min()
         denom = cam.max()
         if denom > 0:
@@ -179,7 +181,7 @@ class GradCAMPlusPlus(GradCAM):
         if target_class is None:
             target_class = int(logits.argmax(dim=1).item())
 
-        score = logits[0, target_class]
+        score = logits[0, target_class] if logits.ndim == 2 else logits[0]
         self.model.zero_grad()
         score.backward()
 
@@ -196,6 +198,8 @@ class GradCAMPlusPlus(GradCAM):
 
         cam = (weights * features).sum(dim=1, keepdim=True)
         cam = F.relu(cam).squeeze().cpu().numpy()
+        if cam.ndim == 0:
+            cam = cam.reshape(1, 1)
         cam = cam - cam.min()
         denom_v = cam.max()
         if denom_v > 0:

@@ -91,8 +91,9 @@ class LRFinder:
 
             raw = loss.item()
             avg_loss = smooth_f * raw + (1 - smooth_f) * avg_loss
-            # Bias correction
-            smoothed = avg_loss / (1 - (1 - smooth_f) ** (step + 1))
+            # Bias correction (guard against smooth_f=0 giving 0-denominator)
+            bias_correction = 1 - (1 - smooth_f) ** (step + 1)
+            smoothed = avg_loss / bias_correction if bias_correction > 0 else raw
 
             current_lr = self.optimizer.param_groups[0]["lr"]
             self.history["lr"].append(current_lr)

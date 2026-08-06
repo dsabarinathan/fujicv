@@ -206,10 +206,10 @@ def build_splits(
         test_df = df.iloc[idx_test].copy()
 
         # Save split assignment
-        df = df.copy()
+        df = df.copy().reset_index(drop=True)
         df["_split"] = "train"
-        df.loc[df.index[idx_val], "_split"] = "val"
-        df.loc[df.index[idx_test], "_split"] = "test"
+        df.iloc[idx_val, df.columns.get_loc("_split")] = "val"
+        df.iloc[idx_test, df.columns.get_loc("_split")] = "test"
         if output_dir:
             out = Path(output_dir)
             out.mkdir(parents=True, exist_ok=True)

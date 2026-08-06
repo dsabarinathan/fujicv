@@ -67,7 +67,7 @@ class LogCoshLoss(nn.Module):
     def forward(self, preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         diff = preds.float() - targets.float()
         # Numerically stable log(cosh(x)) = |x| + log(1 + exp(-2|x|)) - log(2)
-        loss = diff.abs() + F.softplus(-2.0 * diff.abs()) - torch.log(torch.tensor(2.0))
+        loss = diff.abs() + F.softplus(-2.0 * diff.abs()) - 0.6931471805599453  # log(2)
         if self.reduction == "mean":
             return loss.mean()
         return loss.sum()
@@ -132,12 +132,12 @@ class CornLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         K = self.num_classes - 1
-        train_loss = torch.zeros(1, device=logits.device)
+        train_loss = torch.tensor(0.0, device=logits.device)
         for j in range(K):
             mask = targets >= j
             if mask.sum() == 0:
                 continue
             sub_logits = logits[mask, j]
             sub_labels = (targets[mask] > j).float()
-            train_loss += F.binary_cross_entropy_with_logits(sub_logits, sub_labels)
-        return train_loss / K
+            train_loss = train_loss + F.binary_cross_entropy_with_logits(sub_logits, sub_labels)
+        return train_loss / max(K, 1)

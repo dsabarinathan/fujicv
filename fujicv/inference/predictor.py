@@ -142,7 +142,8 @@ class Predictor:
             label = self.idx_to_class.get(idx, str(idx))
             return label, float(probs[idx].item())
         elif self.task == "regression":
-            return float(logits[0].item()), 1.0
+            val = logits[0]
+            return (val.tolist() if val.numel() > 1 else float(val.item())), 1.0
         elif self.task == "multilabel":
             probs = torch.sigmoid(logits)[0]
             mask = probs >= 0.5

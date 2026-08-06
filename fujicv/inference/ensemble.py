@@ -106,16 +106,8 @@ class EnsemblePredictor:
             return (stacked * w).sum(dim=0)
 
         if self.merge == "vote":
-            preds = stacked.argmax(dim=-1)   # (M, B)
-            # Majority vote per sample
-            B = preds.shape[1]
-            result = []
-            for b in range(B):
-                votes = preds[:, b]
-                mode  = int(torch.mode(votes).values.item())
-                result.append(mode)
-            # Return one-hot style — for consistency, return mean logits
-            return stacked.mean(dim=0)   # label extracted in predict()
+            # Return mean logits for probability estimation; predict() does hard-vote on top.
+            return stacked.mean(dim=0)
 
         if self.merge == "max":
             return stacked.max(dim=0).values

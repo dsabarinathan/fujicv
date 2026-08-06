@@ -75,7 +75,7 @@ def build_dataloaders(
         shuffle=True,
         num_workers=num_workers,
         pin_memory=pin_memory,
-        drop_last=len(train_ds) % batch_size == 1,
+        drop_last=(len(train_ds) % batch_size) == 1,  # drop single-sample tail to avoid BN crash
     )
     val_loader = DataLoader(
         val_ds,
