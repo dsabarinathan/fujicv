@@ -227,6 +227,7 @@ class Trainer:
     def _run_epoch(self, loader: DataLoader, training: bool) -> Dict[str, float]:
         self.model.train(training)
         total_loss = 0.0
+        n = 0
         all_preds: List[np.ndarray] = []
         all_targets: List[np.ndarray] = []
 
@@ -252,11 +253,11 @@ class Trainer:
                     if self._ema is not None:
                         self._ema.update(self.model)
 
-                total_loss += loss.item() * images.size(0)
+                batch_n = images.size(0)
+                total_loss += loss.item() * batch_n
+                n += batch_n
                 all_preds.append(logits.detach().cpu().numpy())
                 all_targets.append(targets.detach().cpu().numpy())
-
-        n = len(loader.dataset)
         avg_loss = total_loss / max(n, 1)
 
         preds_arr = np.concatenate(all_preds, axis=0)
