@@ -14,7 +14,7 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
 from fujicv.engine.callbacks import CheckpointCallback, EarlyStopping, LRSchedulerCallback
@@ -206,7 +206,13 @@ class Trainer:
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         self._start_epoch = ckpt.get("epoch", 0) + 1
         if "history" in ckpt:
-            self.history = ckpt["history"]
+            raw = ckpt["history"]
+            if isinstance(raw, History):
+                self.history = raw
+            elif isinstance(raw, dict):
+                self.history = History(metrics=raw)
+            else:
+                logger.warning("Unrecognised history format in checkpoint; starting fresh.")
         logger.info("Resumed from checkpoint %s (epoch %d)", path, self._start_epoch)
 
     def _save_last_checkpoint(self, epoch: int) -> None:
@@ -217,6 +223,7 @@ class Trainer:
             "epoch": epoch,
             "history": self.history,
             "class_to_idx": self.class_to_idx,
+            "task": self.task,
         }
         torch.save(payload, self.output_dir / "last.pt")
 
@@ -238,7 +245,7 @@ class Trainer:
                 images = images.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
 
-                with autocast(enabled=self._use_amp):
+                with autocast("cuda", enabled=self._use_amp):
                     logits = self.model(images)
                     loss = self.loss_fn(logits, targets)
 
@@ -256,7 +263,7 @@ class Trainer:
                 batch_n = images.size(0)
                 total_loss += loss.item() * batch_n
                 n += batch_n
-                all_preds.append(logits.detach().cpu().numpy())
+                all_preds.append(logits.detach().float().cpu().numpy())
                 all_targets.append(targets.detach().cpu().numpy())
         avg_loss = total_loss / max(n, 1)
 
@@ -314,6 +321,7 @@ class Trainer:
                 "epoch": epoch,
                 "history": self.history,
                 "class_to_idx": self.class_to_idx,
+                "task": self.task,
             }
             if self._ema is not None:
                 _extra["ema_state_dict"] = self._ema.state_dict()

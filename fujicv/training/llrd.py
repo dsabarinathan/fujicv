@@ -97,6 +97,8 @@ def get_layer_wise_lr_params(
     for (depth, no_wd), params in groups.items():
         if depth == -1:
             lr = base_lr * head_lr_scale
+        elif num_layers <= 1:
+            lr = base_lr
         else:
             lr = base_lr * (decay_rate ** (num_layers - depth))
 

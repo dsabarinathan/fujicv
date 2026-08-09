@@ -126,8 +126,8 @@ class TemperatureScaling(nn.Module):
                 all_logits.append(model(images.to(device)).cpu())
                 all_targets.append(targets.cpu())
 
-        logits  = torch.cat(all_logits)
-        targets = torch.cat(all_targets)
+        logits  = torch.cat(all_logits).to(device)
+        targets = torch.cat(all_targets).to(device)
 
         optimizer = torch.optim.LBFGS([self.temperature], lr=lr, max_iter=max_iter)
 

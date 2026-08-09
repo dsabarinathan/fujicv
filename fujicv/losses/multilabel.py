@@ -138,9 +138,11 @@ class AsymmetricLoss(nn.Module):
         if self.gamma_pos > 0 or self.gamma_neg > 0:
             pt_pos = probs
             pt_neg = 1.0 - probs_neg
-            gamma_t = torch.where(targets == 1,
-                                  torch.tensor(self.gamma_pos, device=logits.device),
-                                  torch.tensor(self.gamma_neg, device=logits.device))
+            gamma_t = torch.where(
+                targets == 1,
+                torch.full_like(targets, self.gamma_pos, dtype=torch.float32),
+                torch.full_like(targets, self.gamma_neg, dtype=torch.float32),
+            )
             pt = torch.where(targets == 1, pt_pos, pt_neg)
             loss = loss * (1.0 - pt) ** gamma_t
 

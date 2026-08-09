@@ -72,6 +72,11 @@ class MixupCollator:
         images  = torch.stack(images)
         targets = torch.tensor(targets, dtype=torch.long)
 
+        if targets.ndim != 1:
+            raise ValueError(
+                "MixupCollator expects 1-D integer class targets. "
+                "For multilabel or regression use a custom collate_fn."
+            )
         soft = F.one_hot(targets, self.num_classes).float()
 
         if self.alpha == 0 or random.random() > self.prob:
@@ -125,6 +130,11 @@ class CutMixCollator:
         images  = torch.stack(images)
         targets = torch.tensor(targets, dtype=torch.long)
 
+        if targets.ndim != 1:
+            raise ValueError(
+                "CutMixCollator expects 1-D integer class targets. "
+                "For multilabel or regression use a custom collate_fn."
+            )
         soft = F.one_hot(targets, self.num_classes).float()
 
         if random.random() > self.prob:

@@ -169,8 +169,9 @@ class KFoldTrainer:
             train_ds = self.dataset_factory(train_fold_df, self.train_transform)
             val_ds   = self.dataset_factory(val_fold_df,   self.val_transform)
 
-            train_loader = DataLoader(train_ds, shuffle=True,  **self.dl_kwargs)
-            val_loader   = DataLoader(val_ds,   shuffle=False, **self.dl_kwargs)
+            _dl_kw = {"batch_size": 32, **self.dl_kwargs}
+            train_loader = DataLoader(train_ds, shuffle=True,  **_dl_kw)
+            val_loader   = DataLoader(val_ds,   shuffle=False, **_dl_kw)
 
             # Fresh model per fold
             model = self.model_factory()

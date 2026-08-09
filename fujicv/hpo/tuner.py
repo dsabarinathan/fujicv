@@ -110,6 +110,47 @@ def _build_pruner(name: Optional[str], kwargs: Dict[str, Any]):
 
 
 # ---------------------------------------------------------------------------
+# Pruning callback (must be used inside objective_fn to enable pruning)
+# ---------------------------------------------------------------------------
+
+class OptunaPruningCallback:
+    """Epoch-level callback that reports intermediate values and triggers pruning.
+
+    Pass an instance of this to your Trainer and call it after each epoch.
+    Pruning only fires when the study was created with a pruner (e.g. ``pruner="median"``).
+
+    Example::
+
+        def objective(trial):
+            pruning_cb = OptunaPruningCallback(trial, monitor="val_accuracy")
+            trainer = Trainer(..., callbacks=[pruning_cb])
+            history = trainer.train()
+            return max(history.metrics["val_accuracy"])
+
+    Args:
+        trial: Current Optuna ``Trial`` object.
+        monitor: Metric key to report (must match a key in the epoch metrics dict).
+    """
+
+    def __init__(self, trial, monitor: str = "val_loss") -> None:
+        self.trial = trial
+        self.monitor = monitor
+
+    def on_epoch_end(self, epoch: int, metrics: dict) -> None:
+        """Called at the end of each training epoch by the Trainer."""
+        value = metrics.get(self.monitor)
+        if value is None:
+            return
+        self.trial.report(float(value), step=epoch)
+        try:
+            import optuna
+            if self.trial.should_prune():
+                raise optuna.TrialPruned()
+        except ImportError:
+            pass
+
+
+# ---------------------------------------------------------------------------
 # Visualization helpers
 # ---------------------------------------------------------------------------
 

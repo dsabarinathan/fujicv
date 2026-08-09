@@ -133,7 +133,8 @@ class EnsemblePredictor:
             return int(merged.argmax(dim=-1).item())
 
         if self.task == "regression":
-            return float(merged.squeeze().item())
+            v = merged.squeeze(0)
+            return v.tolist() if v.numel() > 1 else float(v.item())
 
         if self.task == "multilabel":
             return (torch.sigmoid(merged) > 0.5).squeeze().cpu().numpy().astype(int)

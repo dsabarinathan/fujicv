@@ -102,7 +102,7 @@ class LRFinder:
             if smoothed < best_loss:
                 best_loss = smoothed
 
-            if smoothed > diverge_th * best_loss:
+            if step > 0 and smoothed > diverge_th * best_loss:
                 break
 
             for pg in self.optimizer.param_groups:

@@ -96,8 +96,8 @@ class DistillationTrainer(Trainer):
 
                 # Student forward
                 if self._use_amp:
-                    from torch.cuda.amp import autocast
-                    with autocast():
+                    from torch.amp import autocast
+                    with autocast("cuda"):
                         student_logits = self.model(images)
                         loss = self.loss_fn(student_logits, teacher_logits, targets)
                 else:
@@ -105,7 +105,7 @@ class DistillationTrainer(Trainer):
                     loss = self.loss_fn(student_logits, teacher_logits, targets)
 
                 if training:
-                    self.optimizer.zero_grad()
+                    self.optimizer.zero_grad(set_to_none=True)
                     if self._use_amp:
                         self._scaler.scale(loss).backward()
                         if self.grad_clip:
@@ -125,8 +125,10 @@ class DistillationTrainer(Trainer):
                 all_preds.append(student_logits.detach().cpu().numpy())
                 all_targets.append(targets.cpu().numpy())
 
-        n = sum(len(t) for t in all_targets)
+        n = sum(t.shape[0] for t in all_targets)
         avg_loss = total_loss / max(n, 1)
+        if not all_preds:
+            return {("train" if training else "val") + "_loss": float("nan")}
         preds_np   = np.concatenate(all_preds)
         targets_np = np.concatenate(all_targets)
 

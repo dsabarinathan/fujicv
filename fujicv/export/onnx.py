@@ -37,7 +37,8 @@ def to_onnx(
     path.parent.mkdir(parents=True, exist_ok=True)
 
     model.eval()
-    dummy = torch.zeros(*input_size)
+    device = next(model.parameters()).device
+    dummy = torch.zeros(*input_size, device=device)
 
     dynamic_axes = {"input": {0: "batch_size"}, "output": {0: "batch_size"}} if dynamic_batch else {}
 
