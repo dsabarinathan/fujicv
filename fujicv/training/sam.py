@@ -83,7 +83,7 @@ class SAM(Optimizer):
                     continue
                 self.state[p]["old_p"] = p.data.clone()
                 # ASAM: scale by |w| per parameter (ASAM paper uses absolute value, not square)
-                e_w = (torch.abs(p) if group["adaptive"] else torch.tensor(1.0)) * p.grad
+                e_w = p.grad * (torch.abs(p) if group["adaptive"] else 1.0)
                 p.add_(e_w, alpha=float(scale))
 
         if zero_grad:

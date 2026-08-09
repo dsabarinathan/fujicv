@@ -310,7 +310,8 @@ class TTAPredictor:
             label = self.idx_to_class.get(idx, str(idx))
             return label, float(p[idx].item())
         elif self.task == "regression":
-            return float(probs[0].item()), 1.0
+            val = probs[0]
+            return (val.tolist() if val.numel() > 1 else float(val.item())), 1.0
         elif self.task == "multilabel":
             p = probs[0]
             mask = p >= 0.5

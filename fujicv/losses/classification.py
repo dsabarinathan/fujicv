@@ -76,7 +76,7 @@ class LabelSmoothingCE(nn.Module):
 
         # One-hot smooth targets
         with torch.no_grad():
-            smooth_targets = torch.full_like(log_probs, self.smoothing / (n_classes - 1))
+            smooth_targets = torch.full_like(log_probs, self.smoothing / max(n_classes - 1, 1))
             smooth_targets.scatter_(-1, targets.unsqueeze(-1), 1.0 - self.smoothing)
 
         loss = -(smooth_targets * log_probs).sum(dim=-1)

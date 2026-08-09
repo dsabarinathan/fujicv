@@ -118,6 +118,8 @@ class DistillationTrainer(Trainer):
                         if self.grad_clip:
                             nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                         self.optimizer.step()
+                    if self._ema is not None:
+                        self._ema.update(self._model_core)
 
                 total_loss += loss.item() * images.size(0)
                 all_preds.append(student_logits.detach().cpu().numpy())

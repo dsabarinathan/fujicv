@@ -174,7 +174,7 @@ class Trainer:
         self._ema = None
         if use_ema:
             from fujicv.training.ema import ModelEMA
-            self._ema = ModelEMA(self.model, decay=ema_decay, warmup_steps=ema_warmup_steps)
+            self._ema = ModelEMA(self._model_core, decay=ema_decay, warmup_steps=ema_warmup_steps)
             logger.info("EMA enabled (decay=%.4f, warmup=%d)", ema_decay, ema_warmup_steps)
 
         self._start_epoch = 0
@@ -251,7 +251,7 @@ class Trainer:
                     self._scaler.step(self.optimizer)
                     self._scaler.update()
                     if self._ema is not None:
-                        self._ema.update(self.model)
+                        self._ema.update(self._model_core)
 
                 batch_n = images.size(0)
                 total_loss += loss.item() * batch_n
@@ -296,7 +296,7 @@ class Trainer:
             train_metrics = self._run_epoch(self.train_loader, training=True)
             # Validate with EMA shadow weights when EMA is active
             if self._ema is not None:
-                with self._ema.average_parameters(self.model):
+                with self._ema.average_parameters(self._model_core):
                     val_metrics = self._run_epoch(self.val_loader, training=False)
             else:
                 val_metrics = self._run_epoch(self.val_loader, training=False)

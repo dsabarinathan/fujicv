@@ -204,7 +204,8 @@ class KFoldTrainer:
                 total = len(self.train_df)
                 logit_shape = (total,) + oof_logits.shape[1:] if oof_logits.ndim > 1 else (total,)
                 oof_preds   = np.full(logit_shape, np.nan, dtype=np.float32)
-                oof_targets = np.full(total, np.nan, dtype=np.float32)
+                target_shape = (total,) + oof_tgts.shape[1:] if oof_tgts.ndim > 1 else (total,)
+                oof_targets = np.full(target_shape, np.nan, dtype=np.float32)
 
             oof_preds[val_idx]   = oof_logits
             oof_targets[val_idx] = oof_tgts

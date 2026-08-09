@@ -105,6 +105,12 @@ class GradCAM:
         self.model.zero_grad()
         score.backward()
 
+        if self._grads is None:
+            raise RuntimeError(
+                "GradCAM: no gradients captured. Ensure target_layer is "
+                "connected to the model output and is not after a detach()."
+            )
+
         # Global average pool of gradients → weights
         weights = self._grads.mean(dim=(2, 3), keepdim=True)   # (1, C, 1, 1)
         cam     = (weights * self._features).sum(dim=1, keepdim=True)  # (1, 1, h, w)
@@ -184,6 +190,12 @@ class GradCAMPlusPlus(GradCAM):
         score = logits[0, target_class] if logits.ndim == 2 else logits[0]
         self.model.zero_grad()
         score.backward()
+
+        if self._grads is None:
+            raise RuntimeError(
+                "GradCAM++: no gradients captured. Ensure target_layer is "
+                "connected to the model output and is not after a detach()."
+            )
 
         grads    = self._grads                           # (1, C, h, w)
         features = self._features                        # (1, C, h, w)

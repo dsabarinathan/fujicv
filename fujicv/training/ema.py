@@ -89,10 +89,9 @@ class ModelEMA:
         """Copy EMA weights into *model* in-place."""
         model.load_state_dict(self.shadow.state_dict())
 
-    def restore(self, original_state: dict) -> None:
-        """Restore a model to a previously saved state dict."""
-        # Convenience: pair with apply_to for temporary evaluation
-        pass
+    def restore(self, model: nn.Module, original_state: dict) -> None:
+        """Restore *model* to a previously saved state dict."""
+        model.load_state_dict(original_state)
 
     def state_dict(self) -> dict:
         return {
