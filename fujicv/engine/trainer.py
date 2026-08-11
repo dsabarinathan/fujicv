@@ -14,7 +14,10 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.amp import GradScaler, autocast
+try:
+    from torch.amp import GradScaler, autocast  # PyTorch >= 2.1
+except ImportError:
+    from torch.cuda.amp import GradScaler, autocast  # PyTorch 2.0.x
 from torch.utils.data import DataLoader
 
 from fujicv.engine.callbacks import CheckpointCallback, EarlyStopping, LRSchedulerCallback

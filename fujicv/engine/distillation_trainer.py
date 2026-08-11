@@ -96,7 +96,10 @@ class DistillationTrainer(Trainer):
 
                 # Student forward
                 if self._use_amp:
-                    from torch.amp import autocast
+                    try:
+                        from torch.amp import autocast
+                    except ImportError:
+                        from torch.cuda.amp import autocast
                     with autocast("cuda"):
                         student_logits = self.model(images)
                         loss = self.loss_fn(student_logits, teacher_logits, targets)
