@@ -4,6 +4,33 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.11.0] — 2026-08-11
+
+### New Features
+
+- **Metric-learning margin heads** (`fujicv.models.metric_heads`) — the
+  workhorse of fine-grained classification and image-retrieval competitions:
+  - `ArcMarginProduct` (ArcFace, Deng et al. 2019) — additive angular margin,
+    with numerically safe hard-margin default and `easy_margin` option.
+  - `AddMarginProduct` / `CosMarginProduct` (CosFace, Wang et al. 2018) —
+    additive cosine margin.
+  - `SubCenterArcMarginProduct` (Sub-center ArcFace, Deng et al. 2020) — `K`
+    sub-centers per class for noisy-label robustness.
+  - Each head takes `(features, labels)`; with `labels=None` it returns plain
+    scaled cosine similarities for inference/retrieval.
+- **Model soups** (`fujicv.training.model_soup`, Wortsman et al. 2022) —
+  average the weights of several fine-tuned models for ensemble-level accuracy
+  at single-model inference cost:
+  - `uniform_soup(model, states)` — plain weight average.
+  - `greedy_soup(model, states, eval_fn)` — keep only ingredients that improve
+    the running soup on a validation callback.
+
+### Tests
+
+- +16 tests: `test_metric_heads.py`, `test_model_soup.py` (285 total, green).
+
+---
+
 ## [1.10.0] — 2026-08-11
 
 ### New Features

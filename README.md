@@ -77,11 +77,12 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 |---|---|
 | **Backbones** | Any `timm` or `torchvision` model — 700+ architectures |
 | **Task heads** | Classification · Regression · Multi-label |
+| **Metric learning** | ArcFace · CosFace · Sub-center ArcFace margin heads |
 | **Custom layers** | LinearBNDropout · GeM Pooling · AttentionPool · SqueezeExcite |
 | **Losses** | 15 losses — CrossEntropy · Focal · LabelSmoothing · CORAL · Ordinal · Huber · Quantile · … |
 | **Metrics** | 16 metrics — Accuracy · F1 · AUROC · mAP · MAE · RMSE · R² · … |
 | **Augmentation** | Albumentations presets · RandAugment · Mixup · CutMix |
-| **Trainer** | AMP · Gradient clipping · Gradient accumulation · EMA · SWA · Early stopping · Checkpointing · History CSV |
+| **Trainer** | AMP · Gradient clipping · Gradient accumulation · EMA · SWA · Model soups · Early stopping · Checkpointing · History CSV |
 | **Fine-tuning** | Layer freezing · Gradual unfreezing · Frozen BN stats · LLRD |
 | **LR utilities** | LR Finder · Cosine warmup · OneCycleLR · LLRD |
 | **Multi-GPU** | `DistributedDataParallel` via `torchrun` (`use_ddp=True`) |
@@ -228,6 +229,35 @@ unfreezer = GradualUnfreezing(model, unfreeze_epoch=2, layers_per_epoch=1)
 for epoch in range(epochs):
     unfreezer.step(epoch)              # unfreeze one backbone block per epoch
     train_one_epoch(...)
+```
+
+### ArcFace margin head (fine-grained / retrieval)
+
+```python
+import torch.nn.functional as F
+from fujicv.models import ArcMarginProduct
+
+head = ArcMarginProduct(in_features=512, num_classes=5000, s=30.0, m=0.5)
+
+# training — margin applied to the ground-truth class
+logits = head(embeddings, labels)
+loss   = F.cross_entropy(logits, labels)
+
+# inference / retrieval — plain scaled cosine
+scores = head(embeddings)              # labels=None
+```
+
+### Model soups (ensemble accuracy, single-model inference)
+
+```python
+import torch
+from fujicv.training import uniform_soup, greedy_soup
+
+states = [torch.load(p)["model_state_dict"] for p in checkpoint_paths]
+
+uniform_soup(model, states)            # plain weight average
+# or keep only ingredients that help a validation metric:
+kept = greedy_soup(model, states, eval_fn=lambda m: evaluate(m, val_loader))
 ```
 
 ---
