@@ -7,7 +7,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-
 # ── compute_ece ───────────────────────────────────────────────────────────────
 
 def test_ece_perfect_calibration():
@@ -64,8 +63,9 @@ def test_temperature_scaling_reduces_confidence():
 
 
 def test_temperature_scaling_fit():
-    from fujicv.eval.calibration import TemperatureScaling
     from torch.utils.data import DataLoader, TensorDataset
+
+    from fujicv.eval.calibration import TemperatureScaling
 
     # Model outputs very large logits for class 0, but all targets are class 1
     # → overconfident on wrong class, so T should grow > 1 to reduce confidence

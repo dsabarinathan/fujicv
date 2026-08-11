@@ -7,7 +7,6 @@ import pytest
 import torch
 from PIL import Image
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_pil(h=32, w=32):
@@ -160,6 +159,7 @@ def test_load_hf_dataset_missing_package(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
     import importlib
+
     from fujicv.data import hf_dataset as _mod
     importlib.reload(_mod)
 

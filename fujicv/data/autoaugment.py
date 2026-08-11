@@ -7,7 +7,6 @@ from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 
-
 # ── Operation bank ─────────────────────────────────────────────────────────────
 
 def _identity(img: np.ndarray, magnitude: float) -> np.ndarray:
@@ -16,8 +15,8 @@ def _identity(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _auto_contrast(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageOps
         from PIL import Image as _PIL
+        from PIL import ImageOps
         pil = _PIL.fromarray(img)
         return np.array(ImageOps.autocontrast(pil))
     except ImportError:
@@ -26,8 +25,8 @@ def _auto_contrast(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _equalize(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageOps
         from PIL import Image as _PIL
+        from PIL import ImageOps
         pil = _PIL.fromarray(img)
         return np.array(ImageOps.equalize(pil))
     except ImportError:
@@ -59,8 +58,8 @@ def _posterize(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _sharpness(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageEnhance
         from PIL import Image as _PIL
+        from PIL import ImageEnhance
         factor = 1.0 + magnitude * 1.8 * (1 if random.random() < 0.5 else -1)
         pil = _PIL.fromarray(img)
         return np.array(ImageEnhance.Sharpness(pil).enhance(max(0.1, factor)))
@@ -70,8 +69,8 @@ def _sharpness(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _color(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageEnhance
         from PIL import Image as _PIL
+        from PIL import ImageEnhance
         factor = 1.0 + magnitude * 1.8 * (1 if random.random() < 0.5 else -1)
         pil = _PIL.fromarray(img)
         return np.array(ImageEnhance.Color(pil).enhance(max(0.1, factor)))
@@ -81,8 +80,8 @@ def _color(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _brightness(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageEnhance
         from PIL import Image as _PIL
+        from PIL import ImageEnhance
         factor = 1.0 + magnitude * 1.8 * (1 if random.random() < 0.5 else -1)
         pil = _PIL.fromarray(img)
         return np.array(ImageEnhance.Brightness(pil).enhance(max(0.1, factor)))
@@ -92,8 +91,8 @@ def _brightness(img: np.ndarray, magnitude: float) -> np.ndarray:
 
 def _contrast(img: np.ndarray, magnitude: float) -> np.ndarray:
     try:
-        from PIL import ImageEnhance
         from PIL import Image as _PIL
+        from PIL import ImageEnhance
         factor = 1.0 + magnitude * 1.8 * (1 if random.random() < 0.5 else -1)
         pil = _PIL.fromarray(img)
         return np.array(ImageEnhance.Contrast(pil).enhance(max(0.1, factor)))

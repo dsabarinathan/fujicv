@@ -6,7 +6,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-
 # ── DropPath ──────────────────────────────────────────────────────────────────
 
 def test_droppath_identity_at_eval():

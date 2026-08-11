@@ -9,7 +9,10 @@ import time
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from fujicv.engine.tensorboard_logger import TensorBoardLogger
 
 import numpy as np
 import torch
@@ -110,6 +113,8 @@ class Trainer:
         ema_decay: float = 0.9999,
         ema_warmup_steps: int = 2000,
         use_ddp: bool = False,
+        grad_accum_steps: int = 1,
+        tb_logger: Optional["TensorBoardLogger"] = None,
     ) -> None:
         self.model = model
         self.train_loader = train_loader
@@ -126,6 +131,10 @@ class Trainer:
         self.grad_clip = grad_clip
         self.monitor_metric = monitor_metric
         self.class_to_idx = class_to_idx or {}
+        self.tb_logger = tb_logger
+        if grad_accum_steps < 1:
+            raise ValueError(f"grad_accum_steps must be >= 1, got {grad_accum_steps}")
+        self.grad_accum_steps = grad_accum_steps
 
         self._is_ddp = False
         if use_ddp:
@@ -246,9 +255,14 @@ class Trainer:
         all_preds: List[np.ndarray] = []
         all_targets: List[np.ndarray] = []
 
+        accum = self.grad_accum_steps
+        num_batches = len(loader) if hasattr(loader, "__len__") else None
+
         ctx = torch.enable_grad() if training else torch.no_grad()
         with ctx:
-            for batch in loader:
+            if training:
+                self.optimizer.zero_grad(set_to_none=True)
+            for batch_idx, batch in enumerate(loader):
                 images, targets = batch
                 images = images.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
@@ -258,15 +272,19 @@ class Trainer:
                     loss = self.loss_fn(logits, targets)
 
                 if training:
-                    self.optimizer.zero_grad(set_to_none=True)
-                    self._scaler.scale(loss).backward()
-                    if self.grad_clip is not None:
-                        self._scaler.unscale_(self.optimizer)
-                        nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-                    self._scaler.step(self.optimizer)
-                    self._scaler.update()
-                    if self._ema is not None:
-                        self._ema.update(self._model_core)
+                    # Scale so accumulated gradients match a full-size batch.
+                    self._scaler.scale(loss / accum).backward()
+
+                    is_last_batch = num_batches is not None and batch_idx == num_batches - 1
+                    if (batch_idx + 1) % accum == 0 or is_last_batch:
+                        if self.grad_clip is not None:
+                            self._scaler.unscale_(self.optimizer)
+                            nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+                        self._scaler.step(self.optimizer)
+                        self._scaler.update()
+                        self.optimizer.zero_grad(set_to_none=True)
+                        if self._ema is not None:
+                            self._ema.update(self._model_core)
 
                 batch_n = images.size(0)
                 total_loss += loss.item() * batch_n
@@ -344,6 +362,10 @@ class Trainer:
             if self.wandb_logger is not None:
                 self.wandb_logger.log_epoch(epoch, epoch_metrics)
 
+            # TensorBoard logging
+            if self.tb_logger is not None:
+                self.tb_logger.log_epoch(epoch, epoch_metrics)
+
             # Early stopping
             if self._early_stop is not None and self._early_stop.step(epoch_metrics):
                 logger.info("Early stopping triggered at epoch %d.", epoch + 1)
@@ -355,6 +377,9 @@ class Trainer:
 
         if self.wandb_logger is not None:
             self.wandb_logger.finish()
+
+        if self.tb_logger is not None:
+            self.tb_logger.finish()
 
         logger.info("Training complete. Outputs saved to %s", self.output_dir)
         return self.history

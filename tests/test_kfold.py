@@ -10,9 +10,7 @@ import pandas as pd
 import pytest
 import torch
 import torch.nn as nn
-from PIL import Image
-from torch.utils.data import DataLoader, TensorDataset
-
+from torch.utils.data import TensorDataset
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -160,8 +158,9 @@ def test_kfold_fold_dirs_created():
 
 
 def test_kfold_missing_sklearn(monkeypatch):
+    import builtins
+
     from fujicv.training.kfold import KFoldTrainer
-    import builtins, importlib
 
     real_import = builtins.__import__
     def mock_import(name, *args, **kwargs):

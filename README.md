@@ -31,30 +31,42 @@ It is designed for: **rapid prototyping, Kaggle competitions, students, and rese
 
 ---
 
-## 12-Line Quick Start
+## Quick Start — CIFAR-10 (auto-downloads, no setup needed)
 
 ```python
-from fujicv.models.builder import ModelBuilder
-from fujicv.losses import get_loss
-from fujicv.metrics import get_metric
+import torch
+from torch.utils.data import DataLoader
+
+import fujicv
+from fujicv.data.datasets import get_default_dataset
+from fujicv.data.transforms import get_train_transforms, get_val_transforms
 from fujicv.engine.trainer import Trainer
-from fujicv.data import build_splits, build_dataloaders
-from fujicv.utils import set_seed
-import torch.optim as optim
+from fujicv.losses.classification import CrossEntropyLoss
+from fujicv.metrics.classification import Accuracy
+from fujicv.models.builder import ModelBuilder
 
-set_seed(42)
-train_df, val_df, _ = build_splits({"csv_path": "data.csv", "image_col": "path", "label_col": "label"})
-train_loader, val_loader, _ = build_dataloaders(train_df, val_df, None, {}, {})
+# Download CIFAR-10 automatically
+train_ds, val_ds, class_to_idx = get_default_dataset(
+    "cifar10", root="data",
+    train_transform=get_train_transforms(32, level="medium"),
+    val_transform=get_val_transforms(32),
+)
+train_loader = DataLoader(train_ds, batch_size=128, shuffle=True,  num_workers=2)
+val_loader   = DataLoader(val_ds,   batch_size=128, shuffle=False, num_workers=2)
 
-model = ModelBuilder("resnet50", task="classification", num_outputs=10).build()
+model = ModelBuilder("resnet18", task="classification", num_outputs=10, image_size=32).build()
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+
 trainer = Trainer(
     model=model, train_loader=train_loader, val_loader=val_loader,
-    loss_fn=get_loss("LabelSmoothingCE", {"smoothing": 0.1}),
-    metrics={"accuracy": get_metric("Accuracy"), "f1": get_metric("F1")},
-    optimizer=optim.AdamW(model.parameters(), lr=3e-4),
-    epochs=30, task="classification", output_dir="outputs/",
+    loss_fn=CrossEntropyLoss(),
+    metrics={"accuracy": Accuracy()},
+    optimizer=optimizer,
+    epochs=10, task="classification", output_dir="runs/cifar10",
+    monitor_metric="val_accuracy",
 )
 history = trainer.train()   # → best.pt  last.pt  history.csv
+# Best val accuracy after 10 epochs on CIFAR-10: ~80%
 ```
 
 ---
@@ -69,14 +81,15 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Losses** | 15 losses — CrossEntropy · Focal · LabelSmoothing · CORAL · Ordinal · Huber · Quantile · … |
 | **Metrics** | 16 metrics — Accuracy · F1 · AUROC · mAP · MAE · RMSE · R² · … |
 | **Augmentation** | Albumentations presets · RandAugment · Mixup · CutMix |
-| **Trainer** | AMP · Gradient clipping · EMA · SWA · Early stopping · Checkpointing · History CSV |
+| **Trainer** | AMP · Gradient clipping · Gradient accumulation · EMA · SWA · Early stopping · Checkpointing · History CSV |
+| **Fine-tuning** | Layer freezing · Gradual unfreezing · Frozen BN stats · LLRD |
 | **LR utilities** | LR Finder · Cosine warmup · OneCycleLR · LLRD |
 | **Multi-GPU** | `DistributedDataParallel` via `torchrun` (`use_ddp=True`) |
 | **HPO** | Optuna hyperparameter search with pruning (`pip install "fujicv[hpo]"`) |
 | **Explainability** | Grad-CAM · Grad-CAM++ · Attention rollout · Confusion matrix |
 | **Export** | ONNX · ONNX INT8 quantization · TorchScript trace/script |
 | **Inference** | `Predictor.from_checkpoint` · `EnsemblePredictor` · TTA |
-| **Logging** | W&B (`WANDB_API_KEY` env var only) |
+| **Logging** | W&B (`WANDB_API_KEY` env var only) · TensorBoard (offline) |
 | **CV / Imbalance** | K-Fold · Stratified K-Fold · WeightedRandomSampler |
 | **Distillation** | `DistillationTrainer` with temperature scaling |
 
@@ -184,6 +197,37 @@ torchrun --nproc_per_node=4 train.py
 ```python
 # In train.py, just add use_ddp=True
 trainer = Trainer(model, ..., use_ddp=True)
+```
+
+### Gradient accumulation (large effective batch on a small GPU)
+
+```python
+# Effective batch = batch_size × grad_accum_steps = 32 × 4 = 128
+trainer = Trainer(model, ..., grad_accum_steps=4)
+history = trainer.train()
+```
+
+### TensorBoard logging (offline, no account)
+
+```python
+from fujicv.engine import TensorBoardLogger
+
+tb = TensorBoardLogger(log_dir="runs/exp1", config={"lr": 1e-3})
+trainer = Trainer(model, ..., tb_logger=tb)
+trainer.train()
+# then:  tensorboard --logdir runs/exp1
+```
+
+### Staged fine-tuning (freeze → gradual unfreeze)
+
+```python
+from fujicv.training import freeze_backbone, GradualUnfreezing
+
+freeze_backbone(model)                 # epoch 0: train the head only
+unfreezer = GradualUnfreezing(model, unfreeze_epoch=2, layers_per_epoch=1)
+for epoch in range(epochs):
+    unfreezer.step(epoch)              # unfreeze one backbone block per epoch
+    train_one_epoch(...)
 ```
 
 ---

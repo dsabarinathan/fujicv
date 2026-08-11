@@ -6,7 +6,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-
 # ── DistillationLoss ──────────────────────────────────────────────────────────
 
 def _logits(n=8, c=4):
@@ -33,8 +32,9 @@ def test_distillation_loss_alpha_one_pure_soft():
 
 def test_distillation_loss_alpha_zero_pure_hard():
     """alpha=0.0 → pure cross-entropy, ignores teacher."""
-    from fujicv.losses.distillation import DistillationLoss
     import torch.nn.functional as F
+
+    from fujicv.losses.distillation import DistillationLoss
     loss_fn = DistillationLoss(alpha=0.0, temperature=4.0)
     s, t, y = _logits()
     loss = loss_fn(s, t, y)
@@ -105,7 +105,7 @@ def test_feature_distillation_registered():
 
 def _make_tiny_loader():
     """Tiny random DataLoader for smoke-testing the trainer."""
-    from torch.utils.data import TensorDataset, DataLoader
+    from torch.utils.data import DataLoader, TensorDataset
     imgs    = torch.randn(16, 3, 32, 32)
     targets = torch.randint(0, 3, (16,))
     ds = TensorDataset(imgs, targets)
@@ -122,7 +122,7 @@ def test_distillation_trainer_smoke():
 
     loader = _make_tiny_loader()
 
-    import tempfile, os
+    import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         trainer = DistillationTrainer(
             teacher=teacher,

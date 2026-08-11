@@ -4,6 +4,33 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.10.0] — 2026-08-11
+
+### New Features
+
+- **Gradient accumulation** — `Trainer(..., grad_accum_steps=N)` splits the
+  effective batch across `N` micro-batches, letting you train with large
+  effective batch sizes on limited GPU memory. Loss is scaled by `1/N`, the
+  optimizer steps every `N` micro-batches (and always on the final partial
+  window), gradient clipping is applied before each step, and EMA updates only
+  on real optimizer steps. Verified numerically equivalent to a single
+  big-batch step.
+- **TensorBoard logging** — new `TensorBoardLogger` (offline, no API key). Pass
+  `Trainer(..., tb_logger=TensorBoardLogger(log_dir="runs/exp1"))`. Metrics are
+  grouped into shared charts (`loss/train` + `loss/val`). Install with
+  `pip install "fujicv[tensorboard]"`.
+- **Layer freezing / gradual unfreezing** — `fujicv.training.freezing` adds
+  `freeze`, `unfreeze`, `freeze_backbone`, `unfreeze_backbone`, `freeze_bn_stats`,
+  `count_trainable_parameters`, and a `GradualUnfreezing` helper that unfreezes
+  the backbone top-down over epochs for staged fine-tuning.
+
+### Tests
+
+- +14 tests: `test_grad_accum.py`, `test_freezing.py`, `test_tensorboard_logger.py`
+  (269 total, all green).
+
+---
+
 ## [1.9.0] — 2026-07-30
 
 ### Bug Fixes & Robustness

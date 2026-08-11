@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 

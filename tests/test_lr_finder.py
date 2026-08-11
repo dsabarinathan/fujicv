@@ -77,8 +77,9 @@ def test_lr_finder_optimizer_lr_restored():
 
 
 def test_lr_finder_plot_returns_figure():
-    from fujicv.training.lr_finder import LRFinder
     import matplotlib
+
+    from fujicv.training.lr_finder import LRFinder
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 

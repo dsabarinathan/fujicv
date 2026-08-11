@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
 def _make_pil(h=64, w=64):
@@ -130,7 +129,7 @@ def test_tta_multilabel():
     ("full", 8),
 ])
 def test_augment_presets_correct_view_count(preset, expected_views):
-    from fujicv.inference.tta import TTAPredictor, _PRESET_AUGMENTS
+    from fujicv.inference.tta import _PRESET_AUGMENTS, TTAPredictor
 
     assert len(_PRESET_AUGMENTS[preset]) == expected_views
 

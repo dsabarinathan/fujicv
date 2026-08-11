@@ -66,7 +66,6 @@ def test_trainer_no_ema_by_default():
 def test_trainer_ema_updates_during_training():
     """EMA shadow weights should change after training."""
     from fujicv.engine.trainer import Trainer
-    from fujicv.training.ema import ModelEMA
     model  = _model()
     loader = _loader()
 
@@ -99,8 +98,9 @@ def test_trainer_ema_updates_during_training():
 
 def test_trainer_ema_checkpoint_contains_ema_state():
     """best.pt should contain 'ema_state_dict' when use_ema=True."""
-    from fujicv.engine.trainer import Trainer
     from pathlib import Path
+
+    from fujicv.engine.trainer import Trainer
     model  = _model()
     loader = _loader()
 

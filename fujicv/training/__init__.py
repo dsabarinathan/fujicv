@@ -1,12 +1,21 @@
 """High-level training utilities (k-fold CV, EMA, schedulers, LLRD, SWA, LR Finder)."""
 
 from fujicv.training.ema import ModelEMA
-from fujicv.training.sam import SAM  # noqa: F401 — re-exported
+from fujicv.training.freezing import (
+    GradualUnfreezing,
+    count_trainable_parameters,
+    freeze,
+    freeze_backbone,
+    freeze_bn_stats,
+    unfreeze,
+    unfreeze_backbone,
+)
 from fujicv.training.kfold import KFoldTrainer
 from fujicv.training.llrd import get_layer_wise_lr_params, print_llrd_summary
+from fujicv.training.lr_finder import LRFinder
+from fujicv.training.sam import SAM  # noqa: F401 — re-exported
 from fujicv.training.schedulers import cosine_with_warmup, get_scheduler, linear_warmup_schedule
 from fujicv.training.swa import SWA, get_swa_scheduler
-from fujicv.training.lr_finder import LRFinder
 
 __all__ = [
     "KFoldTrainer",
@@ -20,4 +29,11 @@ __all__ = [
     "SWA",
     "get_swa_scheduler",
     "LRFinder",
+    "freeze",
+    "unfreeze",
+    "freeze_backbone",
+    "unfreeze_backbone",
+    "freeze_bn_stats",
+    "count_trainable_parameters",
+    "GradualUnfreezing",
 ]

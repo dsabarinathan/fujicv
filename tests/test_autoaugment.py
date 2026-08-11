@@ -63,8 +63,9 @@ def test_randaugment_repr():
 
 
 def test_randaugment_deterministic_with_seed():
-    from fujicv.data.autoaugment import RandAugment
     import random
+
+    from fujicv.data.autoaugment import RandAugment
     aug = RandAugment(n=2, magnitude=9, magnitude_std=0)
     img = _img()
     random.seed(42)

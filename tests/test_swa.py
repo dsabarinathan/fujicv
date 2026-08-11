@@ -77,8 +77,9 @@ def test_swa_finalize_runs_without_error():
 
 
 def test_swa_get_scheduler():
-    from fujicv.training.swa import SWA
     import torch.optim.swa_utils as swa_utils
+
+    from fujicv.training.swa import SWA
 
     model     = _model()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
@@ -88,8 +89,9 @@ def test_swa_get_scheduler():
 
 
 def test_swa_get_scheduler_no_swa_lr_raises():
-    from fujicv.training.swa import SWA
     import pytest
+
+    from fujicv.training.swa import SWA
     model     = _model()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
     swa       = SWA(model)    # no swa_lr at init

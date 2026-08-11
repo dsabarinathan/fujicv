@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import random
 
-import numpy as np
-import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Bug 1: SAM ASAM uses abs(w), not w² ──────────────────────────────────────
 
@@ -67,10 +64,12 @@ def test_cutmix_no_zero_area_patch_at_corner():
 
 def test_distillation_trainer_metric_prefix():
     """_run_epoch must return 'train_loss'/'val_loss', not bare 'loss'."""
+    import tempfile
+
+    from torch.utils.data import DataLoader, TensorDataset
+
     from fujicv.engine.distillation_trainer import DistillationTrainer
     from fujicv.losses.distillation import DistillationLoss
-    from torch.utils.data import DataLoader, TensorDataset
-    import tempfile
 
     teacher = nn.Sequential(nn.Flatten(), nn.Linear(3 * 8 * 8, 3))
     student = nn.Sequential(nn.Flatten(), nn.Linear(3 * 8 * 8, 3))
@@ -125,13 +124,15 @@ def test_ensemble_vote_single_forward(monkeypatch):
 
 def test_kfold_checkpoint_in_fold_dir():
     """best.pt must be saved inside fold_N/, not the original output_dir."""
-    from fujicv.training.kfold import KFoldTrainer
-    from fujicv.losses.classification import CrossEntropyLoss
-    from fujicv.metrics.classification import Accuracy
-    from torch.utils.data import TensorDataset
-    import pandas as pd
     import tempfile
     from pathlib import Path
+
+    import pandas as pd
+    from torch.utils.data import TensorDataset
+
+    from fujicv.losses.classification import CrossEntropyLoss
+    from fujicv.metrics.classification import Accuracy
+    from fujicv.training.kfold import KFoldTrainer
 
     df = pd.DataFrame({
         "img":   [f"img_{i}.jpg" for i in range(30)],
