@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def plot_confusion_matrix(

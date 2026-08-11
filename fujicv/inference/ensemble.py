@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 import torch

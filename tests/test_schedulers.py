@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import math
-
 import pytest
 import torch
 import torch.nn as nn
@@ -18,7 +16,7 @@ def _opt(lr=1e-3):
 def test_linear_warmup_starts_near_zero():
     from fujicv.training.schedulers import linear_warmup_schedule
     opt  = _opt(lr=1.0)
-    sched = linear_warmup_schedule(opt, warmup_steps=10)
+    _sched = linear_warmup_schedule(opt, warmup_steps=10)  # noqa: F841
     # After 0 steps, LR should be 0 / 10 = 0
     assert opt.param_groups[0]["lr"] == pytest.approx(0.0, abs=1e-6)
 

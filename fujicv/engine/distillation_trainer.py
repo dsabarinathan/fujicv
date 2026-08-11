@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fujicv.engine.trainer import History, Trainer
+from fujicv.engine.trainer import Trainer
 from fujicv.losses.distillation import DistillationLoss
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 import torch
 from torch.optim import Optimizer

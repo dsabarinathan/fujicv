@@ -14,10 +14,15 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
+
 try:
-    from torch.amp import GradScaler, autocast  # PyTorch >= 2.1
+    from torch.amp import GradScaler  # PyTorch >= 2.1
+    from torch.amp import autocast as _amp_autocast
+
+    def autocast(enabled: bool = True):  # type: ignore[misc]
+        return _amp_autocast("cuda", enabled=enabled)
 except ImportError:
-    from torch.cuda.amp import GradScaler, autocast  # PyTorch 2.0.x
+    from torch.cuda.amp import GradScaler, autocast  # type: ignore[assignment]  # PyTorch 2.0.x
 from torch.utils.data import DataLoader
 
 from fujicv.engine.callbacks import CheckpointCallback, EarlyStopping, LRSchedulerCallback
@@ -248,7 +253,7 @@ class Trainer:
                 images = images.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
 
-                with autocast("cuda", enabled=self._use_amp):
+                with autocast(enabled=self._use_amp):
                     logits = self.model(images)
                     loss = self.loss_fn(logits, targets)
 

@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
 from torch.utils.data import DataLoader
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = logging.getLogger(__name__)
 

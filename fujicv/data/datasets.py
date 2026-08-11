@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
