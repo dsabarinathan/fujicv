@@ -4,6 +4,46 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.12.0] — 2026-08-18
+
+### DDP Correctness (High priority)
+
+- **Rank-guarded checkpointing** — `best.pt`, `last.pt`, and history files are
+  now written only on rank 0 (`_is_main_process`), eliminating the multi-process
+  race that could corrupt checkpoints under `torchrun`.
+- **Distributed-correct metrics** — `_run_epoch` now all-gathers predictions and
+  targets (`all_gather_object`) and all-reduces the loss across ranks, so
+  `val_accuracy`/`val_loss` reflect the *entire* validation set rather than one
+  GPU's shard. This makes `EarlyStopping` and `ReduceLROnPlateau` behave
+  identically and correctly on every rank.
+
+### Inference Pipeline
+
+- **`Predictor.predict_batch` preserves identifiers** — resolves IDs from
+  loader-yielded `(images, ids)` batches (`yields_ids=True`), an explicit `ids`
+  list, or a running `sample_<idx>` fallback (was: dummy `batchN_sampleI`).
+  Ready for a Kaggle `submission.csv`.
+- **Vectorized decoding** — `_decode_scores` computes softmax/argmax (or
+  sigmoid, or regression outputs) for the whole batch at once instead of a
+  per-item Python loop.
+- **Built-in TTA** — `predict(..., use_tta=True)` and
+  `predict_batch(..., use_tta=True)` average the original image with its
+  horizontal flip (probability space for classification/multilabel, output
+  space for regression).
+
+### Resilience
+
+- **Incremental history** — `history.csv` **and** a new `history.json` are
+  written after *every* epoch, so a preemption/crash at epoch 90/100 no longer
+  loses the metric history. Added `History.to_json`.
+
+### Tests
+
+- +11 tests: `test_predictor_batch.py`, `test_trainer_resilience.py`
+  (296 total, all green).
+
+---
+
 ## [1.11.0] — 2026-08-11
 
 ### New Features

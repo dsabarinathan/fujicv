@@ -85,11 +85,11 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Trainer** | AMP · Gradient clipping · Gradient accumulation · EMA · SWA · Model soups · Early stopping · Checkpointing · History CSV |
 | **Fine-tuning** | Layer freezing · Gradual unfreezing · Frozen BN stats · LLRD |
 | **LR utilities** | LR Finder · Cosine warmup · OneCycleLR · LLRD |
-| **Multi-GPU** | `DistributedDataParallel` via `torchrun` (`use_ddp=True`) |
+| **Multi-GPU** | `DistributedDataParallel` via `torchrun` (`use_ddp=True`) · rank-guarded checkpoints · all-gathered metrics |
 | **HPO** | Optuna hyperparameter search with pruning (`pip install "fujicv[hpo]"`) |
 | **Explainability** | Grad-CAM · Grad-CAM++ · Attention rollout · Confusion matrix |
 | **Export** | ONNX · ONNX INT8 quantization · TorchScript trace/script |
-| **Inference** | `Predictor.from_checkpoint` · `EnsemblePredictor` · TTA |
+| **Inference** | `Predictor.from_checkpoint` · batch predict with IDs · built-in TTA · `EnsemblePredictor` |
 | **Logging** | W&B (`WANDB_API_KEY` env var only) · TensorBoard (offline) |
 | **CV / Imbalance** | K-Fold · Stratified K-Fold · WeightedRandomSampler |
 | **Distillation** | `DistillationTrainer` with temperature scaling |

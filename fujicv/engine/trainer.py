@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import logging
 import os
 import time
@@ -60,6 +61,12 @@ class History:
             writer.writeheader()
             for i, row in enumerate(rows):
                 writer.writerow({"epoch": i, **dict(zip(keys, row))})
+
+    def to_json(self, path: str | Path) -> None:
+        """Write the full metric history as JSON (crash-resilient snapshot)."""
+        path = Path(path)
+        with path.open("w", encoding="utf-8") as fh:
+            json.dump(self.metrics, fh, indent=2)
 
 
 class Trainer:
@@ -212,6 +219,32 @@ class Trainer:
             return m.module  # type: ignore[return-value]
         return m
 
+    @property
+    def _is_main_process(self) -> bool:
+        """Return ``True`` on the rank-0 process (always ``True`` when not DDP)."""
+        return (not self._is_ddp) or torch.distributed.get_rank() == 0
+
+    def _gather_concat(self, arr: np.ndarray) -> np.ndarray:
+        """All-gather a per-rank numpy array and concatenate along axis 0.
+
+        No-op outside DDP. Uses ``all_gather_object`` so ranks may hold
+        different numbers of samples (the last DDP batch is often uneven).
+        """
+        if not self._is_ddp:
+            return arr
+        world_size = torch.distributed.get_world_size()
+        gathered: List[Optional[np.ndarray]] = [None] * world_size
+        torch.distributed.all_gather_object(gathered, arr)
+        return np.concatenate([g for g in gathered if g is not None], axis=0)
+
+    def _reduce_sum(self, *values: float) -> List[float]:
+        """Sum scalar values across all DDP ranks (no-op outside DDP)."""
+        if not self._is_ddp:
+            return list(values)
+        t = torch.tensor(values, dtype=torch.float64, device=self.device)
+        torch.distributed.all_reduce(t, op=torch.distributed.ReduceOp.SUM)
+        return t.tolist()
+
     # ------------------------------------------------------------------
     # Checkpoint I/O
     # ------------------------------------------------------------------
@@ -291,10 +324,14 @@ class Trainer:
                 n += batch_n
                 all_preds.append(logits.detach().float().cpu().numpy())
                 all_targets.append(targets.detach().cpu().numpy())
+
+        # Pool loss and predictions across all DDP ranks so every rank computes
+        # identical, dataset-wide metrics (correct EarlyStopping / LR plateau).
+        total_loss, n = self._reduce_sum(total_loss, float(n))
         avg_loss = total_loss / max(n, 1)
 
-        preds_arr = np.concatenate(all_preds, axis=0)
-        targets_arr = np.concatenate(all_targets, axis=0)
+        preds_arr = self._gather_concat(np.concatenate(all_preds, axis=0))
+        targets_arr = self._gather_concat(np.concatenate(all_targets, axis=0))
 
         prefix = "train" if training else "val"
         result = {f"{prefix}_loss": avg_loss}
@@ -340,19 +377,24 @@ class Trainer:
             metric_str = "  ".join(f"{k}={v:.4f}" for k, v in epoch_metrics.items())
             logger.info("Epoch %d/%d  [%.1fs]  %s", epoch + 1, self.epochs, elapsed, metric_str)
 
-            # Checkpoint
-            _model_to_save = self._model_core
-            _extra = {
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "epoch": epoch,
-                "history": self.history,
-                "class_to_idx": self.class_to_idx,
-                "task": self.task,
-            }
-            if self._ema is not None:
-                _extra["ema_state_dict"] = self._ema.state_dict()
-            self._ckpt.step(epoch_metrics, _model_to_save, extra=_extra)
-            self._save_last_checkpoint(epoch)
+            # Checkpoint + incremental history — rank-0 only under DDP to avoid
+            # concurrent writes corrupting best.pt / last.pt / history files.
+            if self._is_main_process:
+                _model_to_save = self._model_core
+                _extra = {
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "epoch": epoch,
+                    "history": self.history,
+                    "class_to_idx": self.class_to_idx,
+                    "task": self.task,
+                }
+                if self._ema is not None:
+                    _extra["ema_state_dict"] = self._ema.state_dict()
+                self._ckpt.step(epoch_metrics, _model_to_save, extra=_extra)
+                self._save_last_checkpoint(epoch)
+                # Persist history every epoch so preemption/crash never loses it.
+                self.history.to_csv(self.output_dir / "history.csv")
+                self.history.to_json(self.output_dir / "history.json")
 
             # LR scheduler
             if self._lr_callback is not None:
@@ -371,9 +413,11 @@ class Trainer:
                 logger.info("Early stopping triggered at epoch %d.", epoch + 1)
                 break
 
-        # Save history CSV when not using W&B
-        if self.wandb_logger is None or not self.wandb_logger.active:
+        # Final history flush (rank-0 only). Written incrementally each epoch
+        # above, so this is just a last consistent snapshot.
+        if self._is_main_process:
             self.history.to_csv(self.output_dir / "history.csv")
+            self.history.to_json(self.output_dir / "history.json")
 
         if self.wandb_logger is not None:
             self.wandb_logger.finish()

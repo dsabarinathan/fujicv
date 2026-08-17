@@ -118,71 +118,139 @@ class Predictor:
     def predict(
         self,
         image_or_path: Union[str, Path, np.ndarray],
+        use_tta: bool = False,
     ) -> Tuple[Any, float]:
         """Predict a single image.
 
         Args:
             image_or_path: Image file path or numpy RGB array.
+            use_tta: If ``True``, average predictions over the original image
+                and its horizontal flip (test-time augmentation). Averaging is
+                done in probability space for classification/multilabel and in
+                output space for regression.
 
         Returns:
             For classification: ``(label_string, confidence_float)``.
-            For regression: ``(scalar_float, 1.0)``.
+            For regression: ``(scalar_float_or_list, 1.0)``.
             For multilabel: ``(list_of_predicted_labels, mean_confidence)``.
         """
         tensor = self._load_image(image_or_path).to(self.device)
         with torch.no_grad():
-            logits = self.model(tensor)
+            if use_tta:
+                views = [tensor, torch.flip(tensor, dims=[-1])]  # original + hflip
+                scores = torch.stack([self._to_scores(self.model(v)) for v in views]).mean(0)
+            else:
+                scores = self._to_scores(self.model(tensor))
 
-        return self._decode(logits)
+        labels, confs = self._decode_scores(scores)
+        return labels[0], confs[0]
+
+    # ------------------------------------------------------------------
+    # Vectorized decoding
+    # ------------------------------------------------------------------
+
+    def _to_scores(self, logits: torch.Tensor) -> torch.Tensor:
+        """Convert raw logits to the score space used for a task.
+
+        Classification/multiclass → softmax probs; multilabel → sigmoid probs;
+        regression → raw outputs. Shape is always ``(B, ...)``.
+        """
+        if self.task in ("classification", "multiclass"):
+            return torch.softmax(logits, dim=-1)
+        if self.task == "multilabel":
+            return torch.sigmoid(logits)
+        return logits  # regression
+
+    def _decode_scores(self, scores: torch.Tensor) -> Tuple[List[Any], List[float]]:
+        """Vectorized decode of a ``(B, ...)`` score tensor into labels + confidences."""
+        if self.task in ("classification", "multiclass"):
+            conf, idx = scores.max(dim=-1)
+            labels = [self.idx_to_class.get(int(i), str(int(i))) for i in idx.tolist()]
+            return labels, [float(c) for c in conf.tolist()]
+
+        if self.task == "regression":
+            vals = scores
+            if vals.ndim == 1:  # (B,)
+                return [float(v) for v in vals.tolist()], [1.0] * vals.shape[0]
+            return [row for row in vals.tolist()], [1.0] * vals.shape[0]  # (B, n)
+
+        if self.task == "multilabel":
+            labels_out: List[Any] = []
+            confs_out: List[float] = []
+            mask = scores >= 0.5
+            for row_scores, row_mask in zip(scores, mask):
+                present = [self.idx_to_class.get(i, str(i)) for i, m in enumerate(row_mask) if m]
+                labels_out.append(present)
+                confs_out.append(float(row_scores[row_mask].mean().item()) if row_mask.any() else 0.0)
+            return labels_out, confs_out
+
+        raise ValueError(f"Unknown task: {self.task}")
 
     def _decode(self, logits: torch.Tensor) -> Tuple[Any, float]:
-        if self.task in ("classification", "multiclass"):
-            probs = torch.softmax(logits, dim=-1)[0]
-            idx = probs.argmax().item()
-            label = self.idx_to_class.get(idx, str(idx))
-            return label, float(probs[idx].item())
-        elif self.task == "regression":
-            val = logits[0]
-            return (val.tolist() if val.numel() > 1 else float(val.item())), 1.0
-        elif self.task == "multilabel":
-            probs = torch.sigmoid(logits)[0]
-            mask = probs >= 0.5
-            labels = [self.idx_to_class.get(i, str(i)) for i, m in enumerate(mask) if m]
-            mean_conf = float(probs[mask].mean().item()) if mask.any() else 0.0
-            return labels, mean_conf
-        else:
-            raise ValueError(f"Unknown task: {self.task}")
+        """Decode a single ``(1, ...)`` logit tensor (kept for backward compat)."""
+        labels, confs = self._decode_scores(self._to_scores(logits))
+        return labels[0], confs[0]
 
     def predict_batch(
         self,
         dataloader: DataLoader,
         image_col: str = "image",
+        ids: Optional[List[Any]] = None,
+        yields_ids: bool = False,
+        use_tta: bool = False,
     ) -> pd.DataFrame:
         """Run predictions over a DataLoader and return a results DataFrame.
 
+        Identifiers (for a Kaggle ``submission.csv`` etc.) are resolved in this
+        priority order:
+
+        1. ``yields_ids=True`` — the DataLoader yields ``(images, ids)`` batches
+           and the second element is used directly as the identifier.
+        2. ``ids`` — an explicit list aligned with the dataset order (requires
+           ``shuffle=False``); it is sliced per batch.
+        3. Fallback — a running ``sample_<idx>`` index.
+
         Args:
-            dataloader: DataLoader yielding ``(image_tensor, label)`` batches.
-            image_col: Column name for the image identifier in the output.
+            dataloader: DataLoader yielding ``(images, ...)`` batches.
+            image_col: Column name for the identifier in the output.
+            ids: Optional list of identifiers aligned with dataset order.
+            yields_ids: Treat each batch's second element as identifiers.
+            use_tta: Average over the original image and its horizontal flip.
 
         Returns:
-            DataFrame with columns: ``image``, ``prediction``, ``confidence``.
+            DataFrame with columns: ``<image_col>``, ``prediction``, ``confidence``.
         """
-        rows: List[Dict[str, Any]] = []
+        all_ids: List[Any] = []
+        all_labels: List[Any] = []
+        all_confs: List[float] = []
         self.model.eval()
 
+        running = 0
         with torch.no_grad():
-            for batch_idx, batch in enumerate(dataloader):
+            for batch in dataloader:
                 images = batch[0].to(self.device)
-                logits = self.model(images)
-                batch_size = images.size(0)
-                for i in range(batch_size):
-                    label, conf = self._decode(logits[i : i + 1])
-                    rows.append(
-                        {
-                            image_col: f"batch{batch_idx}_sample{i}",
-                            "prediction": label,
-                            "confidence": conf,
-                        }
-                    )
+                if use_tta:
+                    views = [images, torch.flip(images, dims=[-1])]
+                    scores = torch.stack([self._to_scores(self.model(v)) for v in views]).mean(0)
+                else:
+                    scores = self._to_scores(self.model(images))
 
-        return pd.DataFrame(rows)
+                labels, confs = self._decode_scores(scores)
+                bs = images.size(0)
+
+                if yields_ids and len(batch) > 1:
+                    batch_ids = batch[1]
+                    batch_ids = batch_ids.tolist() if torch.is_tensor(batch_ids) else list(batch_ids)
+                elif ids is not None:
+                    batch_ids = ids[running : running + bs]
+                else:
+                    batch_ids = [f"sample_{running + i}" for i in range(bs)]
+
+                all_ids.extend(batch_ids)
+                all_labels.extend(labels)
+                all_confs.extend(confs)
+                running += bs
+
+        return pd.DataFrame(
+            {image_col: all_ids, "prediction": all_labels, "confidence": all_confs}
+        )
