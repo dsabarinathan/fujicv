@@ -63,8 +63,9 @@ class ModelBuilder:
     """Assemble a backbone + optional intermediate layers + task head.
 
     Args:
-        backbone_name: Model name passed to ``build_backbone``.
-        backbone_source: ``'timm'`` (default) or ``'torchvision'``.
+        backbone_name: Model name passed to ``build_backbone`` (a timm/torchvision
+            name, or a Hugging Face repo id when ``backbone_source='hf'``).
+        backbone_source: ``'timm'`` (default), ``'torchvision'``, or ``'hf'``.
         pretrained: Load pretrained weights (default ``True``).
         custom_layers: List of dicts specifying extra layers, each dict::
 
@@ -118,6 +119,7 @@ class ModelBuilder:
             source=self.backbone_source,
             pretrained=self.pretrained,
             drop_path_rate=self.drop_path_rate if self.drop_path_rate > 0.0 else None,
+            image_size=self.image_size,
         )
         backbone: nn.Module = bb["model"]
         out_features: int = bb["out_features"]

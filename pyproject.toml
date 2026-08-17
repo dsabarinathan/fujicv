@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fujicv"
-version = "1.12.0"
+version = "1.13.0"
 description = "Open-source Python package for image classification and regression built on timm + torchvision"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -40,8 +40,10 @@ dependencies = [
 [project.optional-dependencies]
 wandb = ["wandb>=0.15"]
 tensorboard = ["tensorboard>=2.10"]
+mlflow = ["mlflow>=2.0"]
 hpo = ["optuna>=3.0"]
 hf = ["datasets>=2.14"]
+hf-models = ["transformers>=4.30"]
 onnx = ["onnxruntime>=1.15", "onnx>=1.14"]
 dev = [
     "pytest>=7.4",

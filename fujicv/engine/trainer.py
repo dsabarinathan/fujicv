@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
+    from fujicv.engine.base_logger import BaseLogger
     from fujicv.engine.tensorboard_logger import TensorBoardLogger
 
 import numpy as np
@@ -122,6 +123,9 @@ class Trainer:
         use_ddp: bool = False,
         grad_accum_steps: int = 1,
         tb_logger: Optional["TensorBoardLogger"] = None,
+        loggers: Optional[List["BaseLogger"]] = None,
+        compile_model: bool = False,
+        compile_mode: str = "default",
     ) -> None:
         self.model = model
         self.train_loader = train_loader
@@ -139,6 +143,7 @@ class Trainer:
         self.monitor_metric = monitor_metric
         self.class_to_idx = class_to_idx or {}
         self.tb_logger = tb_logger
+        self.loggers = list(loggers) if loggers else []
         if grad_accum_steps < 1:
             raise ValueError(f"grad_accum_steps must be >= 1, got {grad_accum_steps}")
         self.grad_accum_steps = grad_accum_steps
@@ -169,6 +174,29 @@ class Trainer:
         # AMP scaler (only for CUDA)
         self._use_amp = mixed_precision and self.device.type == "cuda"
         self._scaler = GradScaler(enabled=self._use_amp)
+
+        # Optional torch.compile (PyTorch 2.0+) for graph optimisation.
+        self._compiled = False
+        if compile_model:
+            if not hasattr(torch, "compile"):
+                warnings.warn(
+                    "compile_model=True but torch.compile is unavailable "
+                    "(requires PyTorch >= 2.0). Continuing without compilation.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            else:
+                try:
+                    self.model = torch.compile(self.model, mode=compile_mode)  # type: ignore[assignment]
+                    self._compiled = True
+                    logger.info("torch.compile enabled (mode=%s)", compile_mode)
+                except Exception as exc:
+                    # e.g. torch.compile is unsupported on Windows; fall back to eager.
+                    warnings.warn(
+                        f"torch.compile failed ({exc}); continuing without compilation.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
         # Checkpoint callback
         monitor_mode = "min" if "loss" in monitor_metric else "max"
@@ -213,10 +241,18 @@ class Trainer:
 
     @property
     def _model_core(self) -> nn.Module:
-        """Unwrap DDP (or legacy DataParallel) to get the underlying nn.Module."""
+        """Unwrap torch.compile and DDP/DataParallel to the underlying nn.Module.
+
+        Handles any nesting order (compiled-over-DDP or DDP-over-compiled).
+        """
         m = self.model
-        if isinstance(m, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
-            return m.module  # type: ignore[return-value]
+        for _ in range(4):
+            if isinstance(m, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
+                m = m.module
+            elif hasattr(m, "_orig_mod"):  # torch.compile OptimizedModule
+                m = m._orig_mod  # type: ignore[assignment]
+            else:
+                break
         return m
 
     @property
@@ -408,6 +444,10 @@ class Trainer:
             if self.tb_logger is not None:
                 self.tb_logger.log_epoch(epoch, epoch_metrics)
 
+            # Generic loggers (MLflow / Neptune / custom BaseLogger implementations)
+            for lg in self.loggers:
+                lg.log_epoch(epoch, epoch_metrics)
+
             # Early stopping
             if self._early_stop is not None and self._early_stop.step(epoch_metrics):
                 logger.info("Early stopping triggered at epoch %d.", epoch + 1)
@@ -424,6 +464,9 @@ class Trainer:
 
         if self.tb_logger is not None:
             self.tb_logger.finish()
+
+        for lg in self.loggers:
+            lg.finish()
 
         logger.info("Training complete. Outputs saved to %s", self.output_dir)
         return self.history

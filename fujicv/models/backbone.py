@@ -64,6 +64,74 @@ def _build_timm_backbone(
     }
 
 
+class _HFBackboneWrapper(nn.Module):
+    """Adapt a ``transformers`` vision model to FujiCV's tensor-in/tensor-out API.
+
+    HF vision models take ``pixel_values`` and return a structured output. This
+    wrapper forwards the pixel tensor and returns ``last_hidden_state`` — either
+    ``(B, N, C)`` patch tokens (ViT/Swin/DeiT) or ``(B, C, H, W)`` feature maps
+    (ResNet/ConvNeXt) — which the assembled model then pools uniformly.
+    """
+
+    def __init__(self, model: nn.Module) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.model(pixel_values=x)
+        feats = getattr(out, "last_hidden_state", None)
+        if feats is None:
+            # Some models expose the map under a different attribute; fall back
+            # to the first tensor in the output tuple.
+            feats = out[0] if isinstance(out, (tuple, list)) else out
+        return feats
+
+
+def _build_hf_backbone(
+    name: str,
+    pretrained: bool,
+    in_chans: int,
+    image_size: int = 224,
+) -> Dict[str, Any]:
+    try:
+        from transformers import AutoConfig, AutoModel
+    except ImportError as exc:
+        raise ImportError(
+            "transformers is required for source='hf'. "
+            'Install with: pip install "fujicv[hf-models]"  (or: pip install transformers)'
+        ) from exc
+
+    if in_chans != 3:
+        raise ValueError(
+            f"source='hf' backbones support 3-channel input only, got in_chans={in_chans}."
+        )
+
+    if pretrained:
+        model = AutoModel.from_pretrained(name)
+    else:
+        config = AutoConfig.from_pretrained(name)
+        model = AutoModel.from_config(config)
+
+    wrapper = _HFBackboneWrapper(model)
+
+    # Infer output width with a dummy forward (robust across ViT/CNN outputs).
+    wrapper.eval()
+    with torch.no_grad():
+        feats = wrapper(torch.zeros(1, in_chans, image_size, image_size))
+    if feats.dim() == 3:          # (B, N, C) transformer tokens
+        out_features = feats.shape[-1]
+        arch_family = "vit"
+    elif feats.dim() == 4:        # (B, C, H, W) feature map
+        out_features = feats.shape[1]
+        arch_family = "cnn"
+    else:                          # (B, C) already pooled
+        out_features = feats.shape[-1]
+        arch_family = _infer_arch_family(name)
+    wrapper.train()
+
+    return {"model": wrapper, "out_features": out_features, "arch_family": arch_family}
+
+
 def _build_torchvision_backbone(
     name: str,
     pretrained: bool,
@@ -136,16 +204,20 @@ def build_backbone(
     features_only: bool = False,
     out_indices: Optional[List[int]] = None,
     drop_path_rate: Optional[float] = None,
+    image_size: int = 224,
 ) -> Dict[str, Any]:
-    """Build a backbone model from timm or torchvision.
+    """Build a backbone model from timm, torchvision, or Hugging Face.
 
     Args:
-        name: Model name (e.g. ``'resnet50'``, ``'vit_tiny_patch16_224'``).
-        source: Model zoo — ``'timm'`` (default) or ``'torchvision'``.
+        name: Model name (e.g. ``'resnet50'``, ``'vit_tiny_patch16_224'``, or a
+            HF repo id like ``'google/vit-base-patch16-224'``).
+        source: Model zoo — ``'timm'`` (default), ``'torchvision'``, or
+            ``'hf'`` (Hugging Face ``transformers``).
         pretrained: Load pretrained ImageNet weights when ``True``.
-        in_chans: Number of input channels (default 3).
+        in_chans: Number of input channels (default 3; ``'hf'`` requires 3).
         features_only: (timm only) Return intermediate feature maps.
         out_indices: (timm only) Which feature stages to return.
+        image_size: Spatial size for the HF output-width probe (default 224).
 
     Returns:
         Dict with keys:
@@ -164,8 +236,14 @@ def build_backbone(
         if features_only:
             raise ValueError("features_only is not supported for source='torchvision'")
         return _build_torchvision_backbone(name, pretrained)
+    elif source in ("hf", "huggingface", "transformers"):
+        if features_only:
+            raise ValueError("features_only is not supported for source='hf'")
+        return _build_hf_backbone(name, pretrained, in_chans, image_size=image_size)
     else:
-        raise ValueError(f"Unknown source {source!r}. Choose 'timm' or 'torchvision'.")
+        raise ValueError(
+            f"Unknown source {source!r}. Choose 'timm', 'torchvision', or 'hf'."
+        )
 
 
 def list_available_backbones(

@@ -75,7 +75,7 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 
 | Category | What's included |
 |---|---|
-| **Backbones** | Any `timm` or `torchvision` model — 700+ architectures |
+| **Backbones** | Any `timm`, `torchvision`, or Hugging Face `transformers` model |
 | **Task heads** | Classification · Regression · Multi-label |
 | **Metric learning** | ArcFace · CosFace · Sub-center ArcFace margin heads |
 | **Custom layers** | LinearBNDropout · GeM Pooling · AttentionPool · SqueezeExcite |
@@ -90,7 +90,8 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Explainability** | Grad-CAM · Grad-CAM++ · Attention rollout · Confusion matrix |
 | **Export** | ONNX · ONNX INT8 quantization · TorchScript trace/script |
 | **Inference** | `Predictor.from_checkpoint` · batch predict with IDs · built-in TTA · `EnsemblePredictor` |
-| **Logging** | W&B (`WANDB_API_KEY` env var only) · TensorBoard (offline) |
+| **Logging** | W&B · TensorBoard (offline) · MLflow · pluggable `BaseLogger` |
+| **Performance** | `torch.compile` (graph optimisation, PyTorch 2.x) |
 | **CV / Imbalance** | K-Fold · Stratified K-Fold · WeightedRandomSampler |
 | **Distillation** | `DistillationTrainer` with temperature scaling |
 
@@ -102,8 +103,8 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 # Core
 pip install fujicv
 
-# With W&B logging
-pip install "fujicv[wandb]"
+# With experiment logging (W&B / TensorBoard / MLflow)
+pip install "fujicv[wandb]"  "fujicv[tensorboard]"  "fujicv[mlflow]"
 
 # With ONNX export + quantization
 pip install "fujicv[onnx]"
@@ -111,8 +112,11 @@ pip install "fujicv[onnx]"
 # With Optuna HPO
 pip install "fujicv[hpo]"
 
+# With Hugging Face transformers backbones
+pip install "fujicv[hf-models]"
+
 # Everything
-pip install "fujicv[wandb,onnx,hpo]"
+pip install "fujicv[wandb,tensorboard,mlflow,onnx,hpo,hf-models]"
 
 # Dev / testing
 pip install "fujicv[dev]"
@@ -258,6 +262,31 @@ states = [torch.load(p)["model_state_dict"] for p in checkpoint_paths]
 uniform_soup(model, states)            # plain weight average
 # or keep only ingredients that help a validation metric:
 kept = greedy_soup(model, states, eval_fn=lambda m: evaluate(m, val_loader))
+```
+
+### Hugging Face backbone
+
+```python
+from fujicv.models.builder import ModelBuilder
+
+model = ModelBuilder(
+    backbone_name="google/vit-base-patch16-224",  # any HF vision repo id
+    backbone_source="hf",
+    task="classification", num_outputs=10, image_size=224,
+).build()
+```
+
+### MLflow logging + torch.compile
+
+```python
+from fujicv.engine import MLflowLogger
+
+mlf = MLflowLogger("fujicv-experiments", run_name="run1", params={"lr": 1e-3})
+trainer = Trainer(
+    model, ..., loggers=[mlf],   # pluggable — also WandbLogger/TensorBoardLogger
+    compile_model=True,          # torch.compile graph optimisation (PyTorch 2.x)
+)
+trainer.train()
 ```
 
 ---

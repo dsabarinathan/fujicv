@@ -4,6 +4,33 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.13.0] — 2026-08-18
+
+### Extensibility
+
+- **Hugging Face backbones** — `ModelBuilder(backbone_source="hf", ...)` (also
+  `build_backbone(source="hf")`) loads any `transformers` vision model by repo
+  id (ViT, Swin, DeiT, ConvNeXt, …). A wrapper adapts the HF output
+  (`last_hidden_state`, `(B, N, C)` tokens or `(B, C, H, W)` maps) to FujiCV's
+  pooling, and the feature width is auto-probed. Install with
+  `pip install "fujicv[hf-models]"`.
+- **Generic logger interface** — new `BaseLogger` ABC; `Trainer(..., loggers=[...])`
+  drives any implementation. Added `MLflowLogger` (`pip install "fujicv[mlflow]"`).
+  The existing `WandbLogger`/`TensorBoardLogger` already follow the same
+  `log_epoch`/`finish`/`active` contract.
+- **`torch.compile` support** — `Trainer(..., compile_model=True, compile_mode=...)`
+  wraps the model with `torch.compile` for graph optimisation on PyTorch 2.x.
+  Gracefully falls back to eager (with a warning) where compilation is
+  unavailable or unsupported (e.g. Windows). `_model_core` now robustly unwraps
+  any nesting of `torch.compile` + DDP for clean checkpoints.
+
+### Tests
+
+- +12 tests: `test_hf_backbone.py`, `test_loggers.py`, `test_compile.py`
+  (308 passing, 8 skipped).
+
+---
+
 ## [1.12.0] — 2026-08-18
 
 ### DDP Correctness (High priority)
