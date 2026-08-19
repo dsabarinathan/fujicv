@@ -79,6 +79,7 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Task heads** | Classification · Regression · Multi-label |
 | **Metric learning** | ArcFace · CosFace · Sub-center ArcFace margin heads |
 | **Custom layers** | LinearBNDropout · GeM Pooling · AttentionPool · SqueezeExcite |
+| **Head builder** | Pluggable pooling (avg/max/gem/attention) · Linear/Dropout/LayerNorm/BatchNorm/Activation blocks |
 | **Losses** | 15 losses — CrossEntropy · Focal · LabelSmoothing · CORAL · Ordinal · Huber · Quantile · … |
 | **Metrics** | 16 metrics — Accuracy · F1 · AUROC · mAP · MAE · RMSE · R² · … |
 | **Augmentation** | Albumentations presets · RandAugment · Mixup · CutMix |
@@ -88,7 +89,7 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Multi-GPU** | `DistributedDataParallel` via `torchrun` (`use_ddp=True`) · rank-guarded checkpoints · all-gathered metrics |
 | **HPO** | Optuna hyperparameter search with pruning (`pip install "fujicv[hpo]"`) |
 | **Explainability** | Grad-CAM · Grad-CAM++ · Attention rollout · Confusion matrix |
-| **Export** | ONNX · ONNX INT8 quantization · TorchScript trace/script |
+| **Export** | ONNX · TorchScript · INT8 quantization (ONNX · dynamic PTQ · static FX PTQ) |
 | **Inference** | `Predictor.from_checkpoint` · batch predict with IDs · built-in TTA · `EnsemblePredictor` |
 | **Logging** | W&B · TensorBoard (offline) · MLflow · pluggable `BaseLogger` |
 | **Performance** | `torch.compile` (graph optimisation, PyTorch 2.x) |
@@ -287,6 +288,37 @@ trainer = Trainer(
     compile_model=True,          # torch.compile graph optimisation (PyTorch 2.x)
 )
 trainer.train()
+```
+
+### INT8 quantization for edge deployment
+
+```python
+from fujicv.export import quantize_dynamic, quantize_static, measure_model_size
+
+fp32_mb = measure_model_size(model)
+
+# Dynamic PTQ — no calibration data required (great for transformer/MLP heads)
+qmodel = quantize_dynamic(model)
+
+# Static FX PTQ — calibrate on a few batches (best for CNNs)
+qmodel = quantize_static(model, calibration_loader, backend="x86")
+
+print(f"{fp32_mb:.1f} MB → {measure_model_size(qmodel):.1f} MB")
+```
+
+### Custom head + GeM pooling
+
+```python
+model = ModelBuilder(
+    "resnet50", task="classification", num_outputs=100,
+    pooling="gem",                                   # learnable Generalised-Mean pool
+    custom_layers=[
+        {"type": "Linear", "out_features": 512},
+        {"type": "LayerNorm"},
+        {"type": "Activation", "fn": "gelu"},
+        {"type": "Dropout", "p": 0.2},
+    ],
+).build()
 ```
 
 ---

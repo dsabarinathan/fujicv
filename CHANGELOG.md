@@ -4,6 +4,35 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.14.0] — 2026-08-19
+
+### New Features
+
+- **Post-Training Quantization** (`fujicv.export.quantization`) for edge/CPU
+  deployment:
+  - `quantize_dynamic(model)` — INT8 weight quantization, no calibration needed
+    (best for Linear/transformer-heavy models). Deep-copies the model so the
+    original is untouched.
+  - `quantize_static(model, calibration_data, backend=...)` — full static INT8
+    via FX graph mode with calibration (best for CNNs); raises a clear,
+    actionable error if the model isn't FX-traceable.
+  - `measure_model_size(model)` — report the on-disk MB for before/after
+    comparisons.
+- **Expanded `ModelBuilder` head blocks** — `custom_layers` now supports
+  `Linear`, `Dropout`, `LayerNorm`, `BatchNorm1d`, and `Activation`
+  (relu/gelu/silu/tanh/leakyrelu) in addition to `LinearBNDropout`.
+- **Pluggable feature pooling** — `ModelBuilder(..., pooling=...)` selects
+  `'avg'` (default), `'max'`, `'gem'` (learnable Generalised-Mean, ideal for
+  retrieval), or `'attention'` (learned attention pool). Works for both CNN
+  spatial maps and transformer token sequences.
+
+### Tests
+
+- +14 tests: `test_quantization.py`, `test_builder_head_blocks.py`
+  (322 passing, 8 skipped).
+
+---
+
 ## [1.13.0] — 2026-08-18
 
 ### Extensibility
