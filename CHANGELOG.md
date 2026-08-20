@@ -4,6 +4,29 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.14.1] — 2026-08-20
+
+### Critical DDP Fix
+
+- **Fixed multi-GPU hang/deadlock** (`use_ddp=True`). The DDP init never called
+  `torch.cuda.set_device(local_rank)`, so the object collectives added in 1.12.0
+  (`all_gather_object`) allocated their transport tensors on `cuda:0` for *every*
+  rank — NCCL then deadlocked during communicator setup and timed out after 10
+  minutes. Discovered on a real 2×T4 benchmark. Now `set_device` is called
+  before `init_process_group`.
+- **Automatic `DistributedSampler`** — under DDP the `Trainer` now rebuilds the
+  train/val loaders with a `DistributedSampler` (train shuffled, val not),
+  preserving batch size / workers / pinning / `drop_last` / collate. Previously
+  both ranks iterated the *entire* dataset, which gave no throughput speedup and
+  caused `_gather_concat` to double-count the validation set. `set_epoch` is now
+  called each epoch for correct reshuffling.
+
+### Tests
+
+- +2 tests: `test_ddp_loader.py` (single-process gloo) — 324 passing.
+
+---
+
 ## [1.14.0] — 2026-08-19
 
 ### New Features

@@ -149,15 +149,28 @@ class Trainer:
         self.grad_accum_steps = grad_accum_steps
 
         self._is_ddp = False
+        self._train_sampler = None
         if use_ddp:
             # Must be launched via: torchrun --nproc_per_node=N script.py
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            # CRITICAL: pin this process to its GPU *before* any NCCL collective.
+            # Object collectives (all_gather_object) allocate transport tensors on
+            # torch.cuda.current_device(); without set_device every rank defaults
+            # to cuda:0 and NCCL deadlocks during communicator setup.
+            torch.cuda.set_device(local_rank)
             if not torch.distributed.is_initialized():
                 torch.distributed.init_process_group(backend="nccl")
-            local_rank = int(os.environ.get("LOCAL_RANK", 0))
             self.device = torch.device(f"cuda:{local_rank}")
             self.model.to(self.device)
             self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[local_rank])
             self._is_ddp = True
+            # Shard the data across ranks so each GPU sees a disjoint subset.
+            # Without this both ranks iterate the full dataset (no speedup) and
+            # _gather_concat would double-count the validation set.
+            self.train_loader, self._train_sampler = self._distribute_loader(
+                self.train_loader, shuffle=True
+            )
+            self.val_loader, _ = self._distribute_loader(self.val_loader, shuffle=False)
             logger.info("DDP enabled on cuda:%d (world_size=%d)", local_rank, torch.distributed.get_world_size())
         else:
             self.device = get_device(device)
@@ -259,6 +272,29 @@ class Trainer:
     def _is_main_process(self) -> bool:
         """Return ``True`` on the rank-0 process (always ``True`` when not DDP)."""
         return (not self._is_ddp) or torch.distributed.get_rank() == 0
+
+    def _distribute_loader(self, loader: DataLoader, shuffle: bool):
+        """Rebuild *loader* with a ``DistributedSampler`` so each rank sees a shard.
+
+        Returns ``(new_loader, sampler)``. Preserves batch size, workers, pinning,
+        collate function, and drop_last from the original loader.
+        """
+        from torch.utils.data.distributed import DistributedSampler
+
+        sampler = DistributedSampler(loader.dataset, shuffle=shuffle)
+        kwargs = dict(
+            batch_size=loader.batch_size,
+            sampler=sampler,
+            num_workers=loader.num_workers,
+            pin_memory=loader.pin_memory,
+            drop_last=loader.drop_last,
+            collate_fn=loader.collate_fn,
+        )
+        # These are only valid when workers are used.
+        if loader.num_workers > 0:
+            kwargs["persistent_workers"] = loader.persistent_workers
+            kwargs["prefetch_factor"] = loader.prefetch_factor
+        return DataLoader(loader.dataset, **kwargs), sampler
 
     def _gather_concat(self, arr: np.ndarray) -> np.ndarray:
         """All-gather a per-rank numpy array and concatenate along axis 0.
@@ -399,6 +435,9 @@ class Trainer:
 
         for epoch in range(self._start_epoch, self.epochs):
             t0 = time.time()
+            # Reshuffle the DDP shards differently each epoch.
+            if self._train_sampler is not None:
+                self._train_sampler.set_epoch(epoch)
             train_metrics = self._run_epoch(self.train_loader, training=True)
             # Validate with EMA shadow weights when EMA is active
             if self._ema is not None:
