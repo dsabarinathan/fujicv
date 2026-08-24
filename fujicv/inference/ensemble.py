@@ -137,7 +137,8 @@ class EnsemblePredictor:
             return v.tolist() if v.numel() > 1 else float(v.item())
 
         if self.task == "multilabel":
-            return (torch.sigmoid(merged) > 0.5).squeeze().cpu().numpy().astype(int)
+            # squeeze(0) drops only the batch dim, preserving a length-1 label dim.
+            return (torch.sigmoid(merged) > 0.5).squeeze(0).cpu().numpy().astype(int)
 
         raise ValueError(f"Unknown task: {self.task}")
 
@@ -145,8 +146,8 @@ class EnsemblePredictor:
         """Return averaged softmax probabilities ``(num_classes,)``."""
         merged = self._merge(self._forward_all(image))   # (1, C)
         if self.task == "multilabel":
-            return torch.sigmoid(merged).squeeze().cpu().numpy()
-        return F.softmax(merged, dim=-1).squeeze().cpu().numpy()
+            return torch.sigmoid(merged).squeeze(0).cpu().numpy()
+        return F.softmax(merged, dim=-1).squeeze(0).cpu().numpy()
 
     def predict_batch(
         self,

@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fujicv.engine.trainer import Trainer
+from fujicv.engine.trainer import Trainer, autocast
 from fujicv.losses.distillation import DistillationLoss
 
 logger = logging.getLogger(__name__)
@@ -77,62 +77,59 @@ class DistillationTrainer(Trainer):
     # ------------------------------------------------------------------
 
     def _run_epoch(self, loader: DataLoader, training: bool) -> Dict[str, float]:
+        # Mirrors Trainer._run_epoch (grad accumulation, float32 metric cast,
+        # DDP loss reduction + prediction gather) but injects teacher logits.
         self.model.train(training)
         total_loss = 0.0
+        n = 0
         all_preds: List[np.ndarray] = []
         all_targets: List[np.ndarray] = []
 
+        accum = self.grad_accum_steps
+        num_batches = len(loader) if hasattr(loader, "__len__") else None
+
         ctx = torch.enable_grad() if training else torch.no_grad()
         with ctx:
-            for batch in loader:
+            if training:
+                self.optimizer.zero_grad(set_to_none=True)
+            for batch_idx, batch in enumerate(loader):
                 images, targets = batch
-                images  = images.to(self.device, non_blocking=True)
+                images = images.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
 
-                # Teacher forward (always no-grad)
+                # Teacher forward (always frozen / no-grad).
                 with torch.no_grad():
                     teacher_logits = self.teacher(images)
 
-                # Student forward
-                if self._use_amp:
-                    try:
-                        from torch.amp import autocast
-                    except ImportError:
-                        from torch.cuda.amp import autocast
-                    with autocast("cuda"):
-                        student_logits = self.model(images)
-                        loss = self.loss_fn(student_logits, teacher_logits, targets)
-                else:
+                with autocast(enabled=self._use_amp):
                     student_logits = self.model(images)
                     loss = self.loss_fn(student_logits, teacher_logits, targets)
 
                 if training:
-                    self.optimizer.zero_grad(set_to_none=True)
-                    if self._use_amp:
-                        self._scaler.scale(loss).backward()
-                        if self.grad_clip:
+                    self._scaler.scale(loss / accum).backward()
+                    is_last_batch = num_batches is not None and batch_idx == num_batches - 1
+                    if (batch_idx + 1) % accum == 0 or is_last_batch:
+                        if self.grad_clip is not None:
                             self._scaler.unscale_(self.optimizer)
                             nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                         self._scaler.step(self.optimizer)
                         self._scaler.update()
-                    else:
-                        loss.backward()
-                        if self.grad_clip:
-                            nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-                        self.optimizer.step()
-                    if self._ema is not None:
-                        self._ema.update(self._model_core)
+                        self.optimizer.zero_grad(set_to_none=True)
+                        if self._ema is not None:
+                            self._ema.update(self._model_core)
 
-                total_loss += loss.item() * images.size(0)
-                all_preds.append(student_logits.detach().cpu().numpy())
-                all_targets.append(targets.cpu().numpy())
+                batch_n = images.size(0)
+                total_loss += loss.item() * batch_n
+                n += batch_n
+                all_preds.append(student_logits.detach().float().cpu().numpy())
+                all_targets.append(targets.detach().cpu().numpy())
 
-        n = sum(t.shape[0] for t in all_targets)
+        total_loss, n = self._reduce_sum(total_loss, float(n))
         avg_loss = total_loss / max(n, 1)
         if not all_preds:
             return {("train" if training else "val") + "_loss": float("nan")}
-        preds_np   = np.concatenate(all_preds)
-        targets_np = np.concatenate(all_targets)
+        preds_np = self._gather_concat(np.concatenate(all_preds, axis=0))
+        targets_np = self._gather_concat(np.concatenate(all_targets, axis=0))
 
         prefix = "train" if training else "val"
         result = {f"{prefix}_loss": avg_loss}

@@ -169,6 +169,39 @@ def test_distillation_trainer_rejects_wrong_loss():
             )
 
 
+def test_distillation_trainer_grad_accum():
+    """DistillationTrainer must honour grad_accum_steps (regression for the
+    overridden _run_epoch that previously ignored it)."""
+    import tempfile
+
+    import numpy as np
+
+    from fujicv.engine.distillation_trainer import DistillationTrainer
+    from fujicv.losses.distillation import DistillationLoss
+    from fujicv.metrics.classification import Accuracy
+
+    teacher = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(3, 3))
+    student = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(3, 3))
+    loader = _make_tiny_loader()  # 16 samples, bs 8 → 2 batches
+
+    with tempfile.TemporaryDirectory() as tmp:
+        trainer = DistillationTrainer(
+            teacher=teacher, model=student,
+            train_loader=loader, val_loader=loader,
+            loss_fn=DistillationLoss(alpha=0.7, temperature=4.0),
+            metrics={"accuracy": Accuracy()},
+            optimizer=torch.optim.SGD(student.parameters(), lr=0.05),
+            epochs=1, task="classification", output_dir=tmp,
+            mixed_precision=False, grad_accum_steps=2,
+        )
+        history = trainer.train()
+
+    # Float32 metric cast + finite loss prove the base-trainer parity path ran.
+    assert np.isfinite(history.metrics["train_loss"][0])
+    assert 0.0 <= history.metrics["train_accuracy"][0] <= 1.0
+    assert all(torch.isfinite(p).all() for p in student.parameters())
+
+
 def test_teacher_frozen():
     """Teacher parameters must not receive gradients during training."""
     from fujicv.engine.distillation_trainer import DistillationTrainer

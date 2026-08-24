@@ -87,7 +87,8 @@ class ArcMarginProduct(nn.Module):
         if labels is None:
             return cosine * self.s
 
-        sine = torch.sqrt(1.0 - cosine.pow(2))
+        # clamp_min guards fp16/autocast where (1 - cosine²) can round negative → NaN.
+        sine = torch.sqrt((1.0 - cosine.pow(2)).clamp_min(1e-7))
         phi = cosine * self._cos_m - sine * self._sin_m  # cos(theta + m)
         if self.easy_margin:
             phi = torch.where(cosine > 0, phi, cosine)
@@ -206,7 +207,8 @@ class SubCenterArcMarginProduct(nn.Module):
         if labels is None:
             return cosine * self.s
 
-        sine = torch.sqrt(1.0 - cosine.pow(2))
+        # clamp_min guards fp16/autocast where (1 - cosine²) can round negative → NaN.
+        sine = torch.sqrt((1.0 - cosine.pow(2)).clamp_min(1e-7))
         phi = cosine * self._cos_m - sine * self._sin_m
         if self.easy_margin:
             phi = torch.where(cosine > 0, phi, cosine)

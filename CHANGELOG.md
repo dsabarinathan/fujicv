@@ -4,6 +4,34 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.14.2] — 2026-08-24
+
+Release-hardening pass: static audit + runtime stress testing.
+
+### Bug Fixes
+
+- **`DistillationTrainer` parity (HIGH)** — its overridden `_run_epoch` silently
+  diverged from the base `Trainer`: it ignored `grad_accum_steps`, never called
+  the DDP loss-reduction / prediction-gather (so under DDP every rank computed
+  metrics on its own shard, corrupting checkpoint/early-stop selection), and
+  omitted the float32 cast before numpy metrics (feeding fp16 arrays to sklearn
+  under AMP). Rewritten to mirror the base loop exactly while injecting teacher
+  logits.
+- **ArcFace / Sub-center ArcFace fp16 NaN (MEDIUM)** — `sqrt(1 - cosine²)` could
+  round negative under autocast/fp16 (the `1e-7` clamp bound isn't representable
+  in float16), producing NaN loss. Now `sqrt((1 - cosine²).clamp_min(1e-7))`.
+- **`EnsemblePredictor` multilabel squeeze (LOW)** — bare `.squeeze()` in the
+  multilabel `predict`/`predict_proba` paths collapsed the batch dim for
+  batch-size-1 or single-label outputs; now `.squeeze(0)`.
+
+### Tests
+
+- +12 tests: `test_stress.py` (grad-accum×EMA, single-sample/single-class
+  batches, extreme-value losses/metrics, ArcFace fp16 stability, soup with BN
+  buffers) and a `DistillationTrainer` grad-accum regression. 335 passing.
+
+---
+
 ## [1.14.1] — 2026-08-20
 
 ### Critical DDP Fix
