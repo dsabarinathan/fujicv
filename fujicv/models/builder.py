@@ -50,7 +50,13 @@ class _AssembledModel(nn.Module):
         self.pool_type = pool_type
         self._pool = pool if pool is not None else nn.AdaptiveAvgPool2d(1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Return the pooled, pre-head embedding ``(B, D)``.
+
+        This is the representation fed to the task head — the right vector to
+        use for retrieval, kNN, or clustering. See
+        :class:`fujicv.retrieval.Embedder`.
+        """
         feats = self.backbone(x)
 
         # Backbone can return tensors of varying shapes
@@ -63,8 +69,10 @@ class _AssembledModel(nn.Module):
             feats = self._pool_tokens(feats)
         # else already (B, C) — timm with num_classes=0 does pooling internally
 
-        feats = self.custom_layers(feats)
-        return self.head(feats)
+        return self.custom_layers(feats)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.head(self.forward_features(x))
 
     def _pool_spatial(self, feats: torch.Tensor) -> torch.Tensor:
         """Pool CNN spatial features ``(B, C, H, W)`` → ``(B, C)``."""

@@ -78,6 +78,7 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 | **Backbones** | Any `timm`, `torchvision`, or Hugging Face `transformers` model |
 | **Task heads** | Classification · Regression · Multi-label |
 | **Metric learning** | ArcFace · CosFace · Sub-center ArcFace margin heads |
+| **Retrieval** | Embedding extraction · cosine/FAISS kNN index · Recall@K · mAP@K |
 | **Custom layers** | LinearBNDropout · GeM Pooling · AttentionPool · SqueezeExcite |
 | **Head builder** | Pluggable pooling (avg/max/gem/attention) · Linear/Dropout/LayerNorm/BatchNorm/Activation blocks |
 | **Losses** | 15 losses — CrossEntropy · Focal · LabelSmoothing · CORAL · Ordinal · Huber · Quantile · … |
@@ -319,6 +320,22 @@ model = ModelBuilder(
         {"type": "Dropout", "p": 0.2},
     ],
 ).build()
+```
+
+### Image retrieval (embeddings + kNN + Recall@K)
+
+```python
+from fujicv.retrieval import Embedder, RetrievalIndex, evaluate_retrieval
+
+# 1. Extract L2-normalized embeddings from a trained model
+emb, labels = Embedder(model).embed(gallery_loader, return_labels=True)
+
+# 2. Evaluate retrieval quality
+print(evaluate_retrieval(emb, labels, ks=(1, 5, 10)))   # {'recall@1': .., 'mAP@10': ..}
+
+# 3. Nearest-neighbour search (optional FAISS backend for big galleries)
+index = RetrievalIndex(emb, labels)
+sims, idx, hit_labels = index.search(query_emb, k=5)
 ```
 
 ---

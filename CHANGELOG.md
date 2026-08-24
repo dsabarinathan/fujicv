@@ -4,6 +4,38 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.15.0] — 2026-08-25
+
+### New Feature: Image-Retrieval Toolkit
+
+Completes the metric-learning stack (ArcFace/CosFace/Sub-center heads + GeM
+pooling added in 1.11.0) with the tools to actually *use* learned embeddings —
+`fujicv.retrieval`:
+
+- **`Embedder`** — extract pre-head embeddings from a trained model. Uses the
+  new `model.forward_features(x)` when available (all `ModelBuilder` models now
+  expose it), else falls back to the plain forward output. L2-normalizes by
+  default and unwraps `torch.compile`.
+- **`RetrievalIndex`** — cosine nearest-neighbour search over a gallery. Pure
+  PyTorch matmul backend by default; optional FAISS (`pip install
+  "fujicv[retrieval]"`) for large galleries. `search(queries, k)` returns
+  similarities, indices, and gallery labels.
+- **Retrieval metrics** — `recall_at_k`, `precision_at_k`,
+  `mean_average_precision_at_k`, and an `evaluate_retrieval` report. Standard
+  deep-metric-learning definitions; support both leave-one-out (single set) and
+  query-vs-gallery modes.
+
+### Model change
+
+- `ModelBuilder` models (`_AssembledModel`) now expose **`forward_features(x)`**
+  returning the pooled, pre-head embedding; `forward` is `head(forward_features(x))`.
+
+### Tests
+
+- +13 tests (`test_retrieval.py`) with hand-computed metric values; 348 passing.
+
+---
+
 ## [1.14.2] — 2026-08-24
 
 Release-hardening pass: static audit + runtime stress testing.
