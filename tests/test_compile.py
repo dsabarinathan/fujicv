@@ -94,6 +94,6 @@ def test_compiled_trainer_trains_and_checkpoints():
         import os
         assert os.path.exists(os.path.join(tmp, "last.pt"))
         # The saved state_dict must load into a fresh plain model.
-        ckpt = torch.load(os.path.join(tmp, "last.pt"))
+        ckpt = torch.load(os.path.join(tmp, "last.pt"), weights_only=False)
         fresh = _model()
         fresh.load_state_dict(ckpt["model_state_dict"])

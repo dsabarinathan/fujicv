@@ -75,7 +75,7 @@ def test_best_checkpoint_is_loadable():
         )
         trainer.train()
 
-        ckpt = torch.load(Path(tmp) / "best.pt", map_location="cpu")
+        ckpt = torch.load(Path(tmp) / "best.pt", map_location="cpu", weights_only=False)
         assert "model_state_dict"     in ckpt
         assert "optimizer_state_dict" in ckpt
         assert "epoch"                in ckpt

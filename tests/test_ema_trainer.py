@@ -122,7 +122,7 @@ def test_trainer_ema_checkpoint_contains_ema_state():
         trainer.train()
         ckpt_path = Path(tmp) / "best.pt"
         if ckpt_path.exists():
-            ckpt = torch.load(ckpt_path, map_location="cpu")
+            ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
             assert "ema_state_dict" in ckpt
 
 
