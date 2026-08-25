@@ -19,7 +19,7 @@ Example::
 
     from fujicv.training.model_soup import uniform_soup, greedy_soup
 
-    states = [torch.load(p)["model_state_dict"] for p in checkpoint_paths]
+    states = [torch.load(p, weights_only=False)["model_state_dict"] for p in checkpoint_paths]
 
     # Uniform
     uniform_soup(model, states)          # loads averaged weights in-place

@@ -83,7 +83,10 @@ class Predictor:
         """
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        ckpt = torch.load(path, map_location=device)
+        # weights_only=False: FujiCV checkpoints embed non-tensor objects
+        # (class_to_idx, task, History); torch>=2.6 defaults to True and rejects
+        # them. These are the user's own trusted checkpoints.
+        ckpt = torch.load(path, map_location=device, weights_only=False)
 
         class_to_idx = ckpt.get("class_to_idx", {})
         task = ckpt.get("task", "classification")

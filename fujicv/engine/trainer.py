@@ -322,7 +322,10 @@ class Trainer:
     # ------------------------------------------------------------------
 
     def _load_checkpoint(self, path: Path) -> None:
-        ckpt = torch.load(path, map_location=self.device)
+        # weights_only=False: FujiCV checkpoints embed a History object + dicts;
+        # torch>=2.6 defaults weights_only=True and would refuse to unpickle them.
+        # These are the user's own trusted checkpoints.
+        ckpt = torch.load(path, map_location=self.device, weights_only=False)
         self._model_core.load_state_dict(ckpt["model_state_dict"])
         if "optimizer_state_dict" in ckpt:
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])

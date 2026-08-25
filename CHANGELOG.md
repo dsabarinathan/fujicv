@@ -4,6 +4,33 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.15.1] — 2026-08-25
+
+### Bug Fixes
+
+- **Checkpoint loading on PyTorch ≥ 2.6 (`weights_only`)** — `torch.load` defaults
+  to `weights_only=True` on modern PyTorch, which refuses to unpickle the
+  non-tensor objects FujiCV checkpoints embed (`History`, `class_to_idx`,
+  `task`). `Trainer(resume_from=...)`, `Predictor.from_checkpoint`, and model
+  soups now pass `weights_only=False` explicitly (these are the user's own
+  trusted checkpoints). Previously raised `UnpicklingError` on load.
+
+### CI / Docs
+
+- **Fixed the docs build** (`mkdocs build --strict`) — the `nav` referenced 13
+  pages that didn't exist. Added the missing guides (Classification, Regression,
+  Multi-Label, Configuration) and a hand-written API Reference index; removed the
+  unused mkdocstrings plugin (which needed imports the docs job doesn't have).
+- These two issues had been failing every CI run (tests + docs) despite the
+  suite passing locally on older torch.
+
+### Tests
+
+- +2 regression tests (`test_checkpoint_compat.py`) that simulate torch ≥ 2.6's
+  strict `weights_only=True` default on any torch version. 350 passing.
+
+---
+
 ## [1.15.0] — 2026-08-25
 
 ### New Feature: Image-Retrieval Toolkit
