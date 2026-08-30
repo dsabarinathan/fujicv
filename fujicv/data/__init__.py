@@ -9,7 +9,7 @@ from fujicv.data.sampler import (  # noqa: F401 — re-exported
     class_weights_from_labels,
     make_weighted_sampler,
 )
-from fujicv.data.transforms import get_train_transforms, get_val_transforms
+from fujicv.data.transforms import get_hf_transforms, get_train_transforms, get_val_transforms
 
 __all__ = [
     "CSVImageDataset",
@@ -17,6 +17,7 @@ __all__ = [
     "build_dataloaders",
     "get_train_transforms",
     "get_val_transforms",
+    "get_hf_transforms",
     "HFImageDataset",
     "load_hf_dataset",
     "MixupCollator",

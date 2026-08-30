@@ -4,6 +4,38 @@ All notable changes to FujiCV are documented here.
 
 ---
 
+## [1.16.0] — 2026-08-30
+
+### New: Generic modern HF image-encoder support
+
+- **Vision-tower extraction** — `backbone_source="hf"` now works with multimodal
+  encoders (CLIP, SigLIP, BLIP, …). `_resolve_vision_encoder` unwraps the
+  `.vision_model` / `.vision_tower` / `.visual` submodule so the image tower can
+  be used standalone; plain vision models (ViT, DINOv2, ConvNeXt) pass through
+  unchanged.
+- **Robust output extraction** — the wrapper now falls back
+  `last_hidden_state` → `pooler_output` → raw tensor/tuple, covering token,
+  pooled, and feature-map encoders.
+- **`get_hf_transforms(model_name, train=...)`** — builds albumentations
+  pipelines from the encoder's own `AutoImageProcessor` (correct mean/std/size).
+  Using the wrong normalization badly degrades pretrained encoders like CLIP
+  (≈0.48/0.26) and SigLIP (0.5/0.5); this makes it automatic.
+- `get_train_transforms` / `get_val_transforms` now accept custom `mean`/`std`.
+
+### New: Qualitative inspection plots (`fujicv.eval`)
+
+- `plot_image_grid`, `plot_predictions` (green/red correct/wrong),
+  `plot_top_losses` (fast.ai-style worst-error triage), `plot_class_distribution`
+  (imbalance check, multi-split), `plot_confidence_histogram`,
+  `plot_augmentations` (visualize a transform pipeline). All headless-safe.
+
+### Tests
+
+- +25 tests (`test_hf_encoder.py`, `test_inspect_plots.py`) — HF routing tested
+  with stubs (runs without transformers). 375 passing.
+
+---
+
 ## [1.15.1] — 2026-08-25
 
 ### Bug Fixes

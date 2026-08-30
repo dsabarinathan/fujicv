@@ -16,6 +16,14 @@ from fujicv.eval.gradcam import (  # noqa: F401 — re-exported
     GradCAMPlusPlus,
     overlay_heatmap,
 )
+from fujicv.eval.inspect import (
+    plot_augmentations,
+    plot_class_distribution,
+    plot_confidence_histogram,
+    plot_image_grid,
+    plot_predictions,
+    plot_top_losses,
+)
 from fujicv.eval.plots import plot_loss_curves, plot_metric_curves
 from fujicv.eval.report import classification_report
 from fujicv.eval.tsne import extract_embeddings, plot_tsne
@@ -26,6 +34,12 @@ __all__ = [
     "plot_pr_curve",
     "plot_loss_curves",
     "plot_metric_curves",
+    "plot_image_grid",
+    "plot_predictions",
+    "plot_top_losses",
+    "plot_class_distribution",
+    "plot_confidence_histogram",
+    "plot_augmentations",
     "plot_tsne",
     "extract_embeddings",
     "generate_attention_grid",

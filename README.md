@@ -75,7 +75,8 @@ history = trainer.train()   # → best.pt  last.pt  history.csv
 
 | Category | What's included |
 |---|---|
-| **Backbones** | Any `timm`, `torchvision`, or Hugging Face `transformers` model |
+| **Backbones** | Any `timm`, `torchvision`, or HF `transformers` model — incl. CLIP/SigLIP/DINOv2 vision towers |
+| **Visualization** | Loss/metric curves · ROC/PR · t-SNE · confusion · Grad-CAM · prediction grids · top-losses · class balance |
 | **Task heads** | Classification · Regression · Multi-label |
 | **Metric learning** | ArcFace · CosFace · Sub-center ArcFace margin heads |
 | **Retrieval** | Embedding extraction · cosine/FAISS kNN index · Recall@K · mAP@K |
@@ -266,16 +267,31 @@ uniform_soup(model, states)            # plain weight average
 kept = greedy_soup(model, states, eval_fn=lambda m: evaluate(m, val_loader))
 ```
 
-### Hugging Face backbone
+### Hugging Face image encoder (incl. CLIP / SigLIP / DINOv2)
 
 ```python
 from fujicv.models.builder import ModelBuilder
+from fujicv.data.transforms import get_hf_transforms
 
-model = ModelBuilder(
-    backbone_name="google/vit-base-patch16-224",  # any HF vision repo id
-    backbone_source="hf",
-    task="classification", num_outputs=10, image_size=224,
-).build()
+name = "facebook/dinov2-base"     # or google/siglip-base-patch16-224, openai/clip-vit-base-patch32, ...
+
+# Transforms matching the encoder's own image processor (correct mean/std/size)
+train_tf = get_hf_transforms(name, train=True)
+val_tf   = get_hf_transforms(name, train=False)
+
+# Multimodal vision towers (CLIP/SigLIP) are auto-extracted from .vision_model
+model = ModelBuilder(name, backbone_source="hf",
+                     task="classification", num_outputs=10).build()
+```
+
+### Inspect predictions & data
+
+```python
+from fujicv.eval import plot_top_losses, plot_predictions, plot_class_distribution
+
+plot_class_distribution(train_labels, class_names)          # spot imbalance
+plot_predictions(images, y_true, y_pred, class_names)       # green=correct, red=wrong
+plot_top_losses(images, losses, y_true, y_pred, class_names)  # triage worst errors
 ```
 
 ### MLflow logging + torch.compile

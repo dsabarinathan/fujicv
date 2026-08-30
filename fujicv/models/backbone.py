@@ -64,13 +64,29 @@ def _build_timm_backbone(
     }
 
 
-class _HFBackboneWrapper(nn.Module):
-    """Adapt a ``transformers`` vision model to FujiCV's tensor-in/tensor-out API.
+def _resolve_vision_encoder(model: nn.Module) -> nn.Module:
+    """Return the vision tower of a (possibly multimodal) transformers model.
 
-    HF vision models take ``pixel_values`` and return a structured output. This
-    wrapper forwards the pixel tensor and returns ``last_hidden_state`` — either
-    ``(B, N, C)`` patch tokens (ViT/Swin/DeiT) or ``(B, C, H, W)`` feature maps
-    (ResNet/ConvNeXt) — which the assembled model then pools uniformly.
+    CLIP / SigLIP / BLIP and similar load as multimodal models whose ``forward``
+    needs both ``input_ids`` and ``pixel_values``. Their image encoder lives in a
+    ``vision_model`` (or ``vision_tower`` / ``visual``) submodule that accepts
+    ``pixel_values`` alone. Plain vision models (ViT, DINOv2, ConvNeXt, …) have no
+    such attribute and are returned unchanged.
+    """
+    for attr in ("vision_model", "vision_tower", "visual"):
+        sub = getattr(model, attr, None)
+        if isinstance(sub, nn.Module):
+            return sub
+    return model
+
+
+class _HFBackboneWrapper(nn.Module):
+    """Adapt a ``transformers`` vision encoder to FujiCV's tensor-in/tensor-out API.
+
+    Forwards ``pixel_values`` to the (already vision-tower-resolved) encoder and
+    returns a feature tensor: ``(B, N, C)`` patch tokens (ViT/DINOv2/CLIP/SigLIP),
+    ``(B, C, H, W)`` maps (ConvNeXt/ResNet), or ``(B, C)`` if only a pooled vector
+    is available — which the assembled model then pools uniformly.
     """
 
     def __init__(self, model: nn.Module) -> None:
@@ -79,10 +95,12 @@ class _HFBackboneWrapper(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.model(pixel_values=x)
+        # Prefer the full feature map/sequence; fall back to a pooled vector,
+        # then to a raw tensor/tuple for exotic encoders.
         feats = getattr(out, "last_hidden_state", None)
         if feats is None:
-            # Some models expose the map under a different attribute; fall back
-            # to the first tensor in the output tuple.
+            feats = getattr(out, "pooler_output", None)
+        if feats is None:
             feats = out[0] if isinstance(out, (tuple, list)) else out
         return feats
 
@@ -112,7 +130,8 @@ def _build_hf_backbone(
         config = AutoConfig.from_pretrained(name)
         model = AutoModel.from_config(config)
 
-    wrapper = _HFBackboneWrapper(model)
+    encoder = _resolve_vision_encoder(model)  # unwrap CLIP/SigLIP vision towers
+    wrapper = _HFBackboneWrapper(encoder)
 
     # Infer output width with a dummy forward (robust across ViT/CNN outputs).
     wrapper.eval()
