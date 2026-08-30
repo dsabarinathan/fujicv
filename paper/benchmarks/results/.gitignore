@@ -1,0 +1,2 @@
+# Benchmark outputs are generated locally, not committed.
+*.json
