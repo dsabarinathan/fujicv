@@ -231,27 +231,32 @@ Single-GPU & FujiCV      & $330.1 \pm 39.9$ & $436.5$ & $+4.1\%$ \\
 
 \subsection{E3: Accuracy parity}
 \label{sec:e3}
-To confirm the abstraction does not cost accuracy, we train the \emph{same}
-recipe --- ResNet-18 from scratch, $32{\times}32$, five epochs, AdamW at
-$3{\times}10^{-4}$ with cosine annealing, AMP, and identical resize+horizontal-flip
-augmentation --- with a hand-written loop and with FujiCV, and compare top-1
-validation accuracy on CIFAR-10 (Table~\ref{tab:accuracy}). Matching the recipe
-is essential: an initial FujiCV run that inadvertently used a stronger
-augmentation preset underfit at this short budget and scored $66.2\%$, a gap
-attributable to the augmentation policy, not the framework; with augmentation
-equalized the two agree within run-to-run variance.
+To confirm the abstraction does not cost accuracy, we train the \emph{identical}
+recipe --- the same torchvision ResNet-18 from scratch, $32{\times}32$, five
+epochs, AdamW at $3{\times}10^{-4}$ with cosine annealing, AMP, resize+horizontal-flip
+augmentation, and plain-resize validation --- with a hand-written loop and with
+FujiCV, and compare top-1 CIFAR-10 accuracy (Table~\ref{tab:accuracy}). Reaching a
+valid comparison required removing three confounds that each produced a spurious
+gap: a stronger default augmentation preset ($66.2\%$), a different backbone
+implementation (timm vs.\ torchvision, $67.9\%$), and FujiCV's default
+resize-then-center-crop validation transform, which mildly degrades
+native-resolution evaluation. With all three equalized the two agree to within
+run-to-run variance ($\Delta = +1.0$~pt). This underscores a general point
+(\S\ref{sec:threats}): at short from-scratch budgets, preprocessing defaults and
+initialization variance dominate, and only a fully-matched recipe isolates the
+effect of the training loop --- which is, as expected, negligible.
 
 \begin{table}[h]
 \centering
-\caption{Top-1 CIFAR-10 validation accuracy (\%), identical from-scratch recipe.
-FujiCV matches the hand-written loop.}
+\caption{Top-1 CIFAR-10 validation accuracy (\%) under an identical from-scratch
+recipe and identical model. FujiCV matches the hand-written loop within variance.}
 \label{tab:accuracy}
 \small
 \begin{tabular}{lccc}
 \toprule
 Dataset (model) & Raw PyTorch & FujiCV & $\Delta$ \\
 \midrule
-CIFAR-10 (ResNet-18, 5 ep, scratch) & 71.9 & \textit{PENDING} & \textit{PENDING} \\
+CIFAR-10 (ResNet-18, 5 ep, scratch) & 71.9 & 72.9 & $+1.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -350,6 +355,15 @@ run-to-run standard deviation. We therefore report mean\,$\pm$\,std over three
 runs after a warmup, on a quiescent machine, and equalize functionality
 explicitly. Absolute throughput remains sensitive to data-loading, worker count,
 and machine contention.
+
+\textbf{Fairness of accuracy comparisons.} Accuracy parity (E3) is only
+meaningful when the model, augmentation, and preprocessing are identical.
+Removing three confounds --- augmentation strength, backbone implementation
+(timm vs.\ torchvision), and the validation transform --- moved the apparent gap
+from nearly six points to $+1.0$~pt, within variance. At short from-scratch
+budgets, initialization variance and preprocessing defaults dominate; a
+fully-matched recipe (and, ideally, multiple seeds or a pretrained longer
+schedule) is required to isolate the training loop.
 
 \textbf{Nature of the contribution.} Several components wrap established
 libraries (\texttt{timm}, \texttt{albumentations}, Hugging~Face). The

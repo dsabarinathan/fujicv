@@ -23,6 +23,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="cifar10", choices=["cifar10", "mnist"])
     ap.add_argument("--backbone", default="resnet18")
+    ap.add_argument("--backbone-source", default="timm", choices=["timm", "torchvision"])
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--image-size", type=int, default=32)
     ap.add_argument("--batch-size", type=int, default=128)
@@ -32,8 +33,14 @@ def main():
                     help="Train the backbone from scratch (match a from-scratch baseline).")
     ap.add_argument("--aug-level", default="medium", choices=["light", "medium", "heavy"],
                     help="Augmentation strength; use 'light' to match a resize+flip baseline.")
+    ap.add_argument("--val-plain", action="store_true",
+                    help="Use plain resize (no center-crop) for validation, matching a "
+                         "native-resolution baseline.")
     args = ap.parse_args()
     set_seed(args.seed)
+
+    import albumentations as A
+    from albumentations.pytorch import ToTensorV2
 
     from fujicv.data.datasets import get_default_dataset
     from fujicv.data.transforms import get_train_transforms, get_val_transforms
@@ -42,15 +49,25 @@ def main():
     from fujicv.metrics.classification import Accuracy
     from fujicv.models.builder import ModelBuilder
 
+    # Plain resize (no center-crop) matches a native-resolution baseline exactly.
+    if args.val_plain:
+        val_tf = A.Compose([
+            A.Resize(args.image_size, args.image_size),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2(),
+        ])
+    else:
+        val_tf = get_val_transforms(args.image_size)
+
     train_ds, val_ds, c2i = get_default_dataset(
         args.dataset, root="data",
         train_transform=get_train_transforms(args.image_size, level=args.aug_level),
-        val_transform=get_val_transforms(args.image_size),
+        val_transform=val_tf,
     )
     tl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
     vl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-    model = ModelBuilder(args.backbone, backbone_source="timm",
+    model = ModelBuilder(args.backbone, backbone_source=args.backbone_source,
                          pretrained=not args.no_pretrained,
                          task="classification", num_outputs=len(c2i),
                          image_size=args.image_size).build()
