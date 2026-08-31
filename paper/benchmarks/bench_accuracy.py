@@ -28,6 +28,8 @@ def main():
     ap.add_argument("--batch-size", type=int, default=128)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--no-pretrained", action="store_true",
+                    help="Train the backbone from scratch (match a from-scratch baseline).")
     args = ap.parse_args()
     set_seed(args.seed)
 
@@ -46,7 +48,8 @@ def main():
     tl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
     vl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-    model = ModelBuilder(args.backbone, backbone_source="timm", pretrained=True,
+    model = ModelBuilder(args.backbone, backbone_source="timm",
+                         pretrained=not args.no_pretrained,
                          task="classification", num_outputs=len(c2i),
                          image_size=args.image_size).build()
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
