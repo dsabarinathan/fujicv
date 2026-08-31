@@ -44,50 +44,82 @@ def make_model() -> nn.Module:
                         task="classification", num_outputs=10, image_size=64).build()
 
 
-def run_raw(model, loader, device, epochs, use_amp):
+def run_raw(model, train_loader, val_loader, device, epochs, use_amp):
+    """Equivalent-functionality raw loop: FujiCV also tracks train+val accuracy
+    and checkpoints every epoch, so the raw baseline must do the same to be fair."""
+    import tempfile
+    from pathlib import Path
+
+    import numpy as np
     model = model.to(device).train()
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
     crit = nn.CrossEntropyLoss()
     scaler = GradScaler(enabled=use_amp)
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats(device)
-    seen = 0
-    with Timer() as t:
-        for _ in range(epochs):
-            for x, y in loader:
-                x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
-                opt.zero_grad(set_to_none=True)
-                with _AMP(use_amp):
-                    loss = crit(model(x), y)
-                scaler.scale(loss).backward()
-                scaler.step(opt); scaler.update()
-                seen += x.size(0)
+    n_train = len(train_loader.dataset)
+
+    def evaluate(loader):
+        preds, tgts = [], []
+        for x, y in loader:
+            x = x.to(device, non_blocking=True)
+            with _AMP(use_amp):
+                logits = model(x)
+            preds.append(logits.detach().float().cpu().numpy())
+            tgts.append(y.numpy())
+        return float((np.concatenate(preds).argmax(1) == np.concatenate(tgts)).mean())
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        best = 0.0
+        with Timer() as t:
+            for _ in range(epochs):
+                model.train()
+                tr_preds, tr_tgts = [], []
+                for x, y in train_loader:
+                    x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+                    opt.zero_grad(set_to_none=True)
+                    with _AMP(use_amp):
+                        logits = model(x)
+                        loss = crit(logits, y)
+                    scaler.scale(loss).backward()
+                    scaler.step(opt); scaler.update()
+                    tr_preds.append(logits.detach().float().cpu().numpy())
+                    tr_tgts.append(y.detach().cpu().numpy())
+                (np.concatenate(tr_preds).argmax(1) == np.concatenate(tr_tgts)).mean()  # train acc
+                model.eval()
+                with torch.no_grad():
+                    val_acc = evaluate(val_loader)
+                # Checkpoint (best + last) like FujiCV.
+                torch.save({"model_state_dict": model.state_dict()}, out / "last.pt")
+                if val_acc > best:
+                    best = val_acc
+                    torch.save({"model_state_dict": model.state_dict()}, out / "best.pt")
     peak = torch.cuda.max_memory_allocated(device) / 1024**2 if torch.cuda.is_available() else 0.0
-    return seen / t.elapsed, peak
+    return n_train * epochs / t.elapsed, peak
 
 
-def run_fujicv(model, loader, device, epochs, use_amp):
+def run_fujicv(model, train_loader, val_loader, device, epochs, use_amp):
     import tempfile
 
     from fujicv.engine.trainer import Trainer
     from fujicv.losses.classification import CrossEntropyLoss
-    n = len(loader.dataset)
+    from fujicv.metrics.classification import Accuracy
+    n_train = len(train_loader.dataset)
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats(device)
     with tempfile.TemporaryDirectory() as tmp:
         trainer = Trainer(
-            model=model, train_loader=loader, val_loader=loader,
-            loss_fn=CrossEntropyLoss(), metrics={},
+            model=model, train_loader=train_loader, val_loader=val_loader,
+            loss_fn=CrossEntropyLoss(), metrics={"accuracy": Accuracy()},
             optimizer=torch.optim.AdamW(model.parameters(), lr=1e-3),
             epochs=epochs, task="classification", output_dir=tmp,
             mixed_precision=use_amp,
         )
         with Timer() as t:
-            # Time only training epochs; validation is cheap but included for parity.
             trainer.train()
-    seen = n * epochs
     peak = torch.cuda.max_memory_allocated(device) / 1024**2 if torch.cuda.is_available() else 0.0
-    return seen / t.elapsed, peak
+    return n_train * epochs / t.elapsed, peak
 
 
 def timed(fn, runs, **kw):
@@ -99,6 +131,13 @@ def timed(fn, runs, **kw):
         if r > 0:  # discard warmup
             tputs.append(tp); mems.append(mem)
     return tputs, mems
+
+
+def build_val_loader(n_val, batch_size, img, num_workers):
+    X = torch.randn(n_val, 3, img, img)
+    y = torch.randint(0, 10, (n_val,))
+    return DataLoader(TensorDataset(X, y), batch_size=batch_size, shuffle=False,
+                      num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
 
 def main():
@@ -114,9 +153,11 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     use_amp = (not args.no_amp) and device.type == "cuda"
-    loader = build_loaders(args.n_train, args.batch_size, args.img, args.num_workers)
+    train_loader = build_loaders(args.n_train, args.batch_size, args.img, args.num_workers)
+    val_loader = build_val_loader(args.n_train // 4, args.batch_size, args.img, args.num_workers)
 
-    kw = dict(loader=loader, device=device, epochs=args.epochs, use_amp=use_amp)
+    kw = dict(train_loader=train_loader, val_loader=val_loader, device=device,
+              epochs=args.epochs, use_amp=use_amp)
     raw_tp, raw_mem = timed(run_raw, args.runs, **kw)
     fuji_tp, fuji_mem = timed(run_fujicv, args.runs, **kw)
 

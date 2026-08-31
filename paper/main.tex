@@ -182,17 +182,18 @@ training script (Table~\ref{tab:loc}).
 
 \begin{table}[h]
 \centering
-\caption{Lines of code for an equivalent training pipeline (lower is better).}
+\caption{Lines of code for an equivalent CIFAR-10 training pipeline (AMP, cosine
+schedule, accuracy tracking, best-checkpoint selection, early stopping;
+non-comment, non-blank, non-docstring lines). Lower is better.}
 \label{tab:loc}
 \small
 \begin{tabular}{lcc}
 \toprule
 Framework & LoC & Relative \\
 \midrule
-Raw PyTorch       & 152 & 1.00$\times$ \\
-PyTorch Lightning & \textit{TBD} & \textit{TBD} \\
-fastai            & \textit{TBD} & \textit{TBD} \\
-\textbf{FujiCV}   & 89  & \textbf{0.59$\times$} \\
+Raw PyTorch       & 94 & 1.00$\times$ \\
+PyTorch Lightning & 69 & 0.73$\times$ \\
+\textbf{FujiCV}   & 61 & \textbf{0.65$\times$} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -200,22 +201,28 @@ fastai            & \textit{TBD} & \textit{TBD} \\
 \subsection{E2: Throughput and memory overhead}
 \label{sec:e2}
 We measure training throughput (images/s) and peak GPU memory against an
-equivalent hand-written PyTorch loop on identical data and model, reporting the
-mean $\pm$ standard deviation over $N{=}3$ runs after a warmup epoch, on a single
-GPU and with 2-GPU DistributedDataParallel (Table~\ref{tab:throughput}).
+equivalent hand-written PyTorch loop that performs the \emph{same} work --- both
+train and validate each epoch, track train/validation accuracy, and checkpoint ---
+on identical data and model (ResNet-18, $64{\times}64$), reporting the mean $\pm$
+standard deviation over $N{=}3$ runs after a warmup run
+(Table~\ref{tab:throughput}). Crucially, the comparison is only meaningful when
+both pipelines do identical work: an earlier iteration in which the raw loop
+omitted validation and metric collection showed an apparent $55\%$ overhead that
+vanished once functionality was equalized (see \S\ref{sec:threats}).
 
 \begin{table}[h]
 \centering
-\caption{Throughput and peak memory (ResNet-18, CelebA, $64{\times}64$). Values
-are placeholders pending the final controlled runs; see \S\ref{sec:threats}.}
+\caption{Throughput and peak memory on a single NVIDIA RTX~2070 (ResNet-18,
+$64{\times}64$, AMP, batch 256), mean\,$\pm$\,std over 3 runs. The FujiCV overhead
+lies within run-to-run variance and memory is identical.}
 \label{tab:throughput}
 \small
 \begin{tabular}{llccc}
 \toprule
 Setting & Framework & Throughput (img/s) $\uparrow$ & Peak mem (MB) $\downarrow$ & Overhead \\
 \midrule
-Single-GPU & Raw PyTorch & \textit{TBD} & \textit{TBD} & --- \\
-Single-GPU & FujiCV      & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+Single-GPU & Raw PyTorch & $344.3 \pm 43.7$ & $436.5$ & --- \\
+Single-GPU & FujiCV      & $330.1 \pm 39.9$ & $436.5$ & $+4.1\%$ \\
 2$\times$ DDP & Raw PyTorch & \textit{TBD} & \textit{TBD} & --- \\
 2$\times$ DDP & FujiCV      & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
 \bottomrule
@@ -271,21 +278,32 @@ Baseline           & \textit{TBD} & --- \\
 
 \subsection{E5: Deployment (quantization)}
 \label{sec:e5}
-We report model size and CPU inference latency for FP32, dynamic INT8, and
-static (FX) INT8 post-training quantization (Table~\ref{tab:deploy}).
+We report model size and single-image CPU inference latency for FP32, dynamic
+INT8, and static (FX graph-mode) INT8 post-training quantization on a ResNet-18
+at $224{\times}224$ (Table~\ref{tab:deploy}). Two findings are instructive and
+honestly reported. First, \emph{dynamic} quantization only quantizes linear
+layers and therefore yields negligible benefit on a convolution-dominated CNN;
+it is appropriate for transformer/MLP-heavy models. Second, \emph{static} FX
+quantization requires a symbolically traceable model: it delivers a
+$3.96\times$ size reduction and $2.4\times$ speedup on a standard torchvision
+ResNet-18, but FujiCV's assembled model (a \texttt{timm} backbone behind a
+wrapper) is not always FX-traceable, so static PTQ should be applied to a
+traceable backbone or via the ONNX quantization path. This is a current
+limitation (\S\ref{sec:conclusion}).
 
 \begin{table}[h]
 \centering
-\caption{Post-training quantization: size and CPU latency.}
+\caption{Post-training quantization (ResNet-18, $224{\times}224$, CPU). Static
+INT8 is measured on a traceable torchvision model.}
 \label{tab:deploy}
 \small
 \begin{tabular}{lccc}
 \toprule
-Variant & Size (MB) $\downarrow$ & Latency (ms) $\downarrow$ & Acc.\ drop \\
+Variant & Size (MB) $\downarrow$ & Latency (ms) $\downarrow$ & Reduction \\
 \midrule
-FP32          & \textit{TBD} & \textit{TBD} & --- \\
-Dynamic INT8  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
-Static INT8   & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+FP32          & 42.73 & 213.7 & --- \\
+Dynamic INT8  & 42.72 & 185.5 & $\approx$1$\times$ (CNN) \\
+Static INT8   & 10.79 & 89.3  & \textbf{3.96$\times$ / 2.4$\times$} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -318,12 +336,29 @@ CUB-200 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
 
 \section{Threats to Validity}
 \label{sec:threats}
-% Be explicit and honest: (i) throughput comparisons are sensitive to data
-% loading, worker count, and shared-machine contention -- report warmup, fixed
-% workers, and multiple runs; (ii) many components wrap timm/albumentations/HF,
-% so the contribution is standardized, tested integration rather than new
-% algorithms; (iii) LoC is an imperfect proxy for effort, measured with a fixed
-% counting rule.
+\textbf{Fairness of throughput comparisons.} Throughput measurements are only
+meaningful when the compared pipelines perform identical work. In an early
+iteration of E2 the hand-written baseline omitted the per-epoch validation pass
+and metric collection that FujiCV performs by default, producing a misleading
+apparent overhead of $+55\%$; equalizing functionality (train, validate, track
+train/validation accuracy, checkpoint) reduced this to $+4.1\%$, within the
+run-to-run standard deviation. We therefore report mean\,$\pm$\,std over three
+runs after a warmup, on a quiescent machine, and equalize functionality
+explicitly. Absolute throughput remains sensitive to data-loading, worker count,
+and machine contention.
+
+\textbf{Nature of the contribution.} Several components wrap established
+libraries (\texttt{timm}, \texttt{albumentations}, Hugging~Face). The
+contribution is a \emph{standardized, tested, and unified integration} with
+broad task coverage, not new learning algorithms; we do not claim
+state-of-the-art accuracy.
+
+\textbf{Lines of code} is an imperfect proxy for developer effort; we report it
+under a fixed counting rule (non-comment, non-blank, non-docstring lines) for an
+identically-specified pipeline, and release all three scripts.
+
+\textbf{Hardware scope.} DDP correctness and the throughput/memory study were
+validated on a single node; multi-node scaling is future work.
 
 \section{Limitations and Conclusion}
 \label{sec:conclusion}
