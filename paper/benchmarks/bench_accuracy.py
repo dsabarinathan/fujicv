@@ -30,6 +30,8 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--no-pretrained", action="store_true",
                     help="Train the backbone from scratch (match a from-scratch baseline).")
+    ap.add_argument("--aug-level", default="medium", choices=["light", "medium", "heavy"],
+                    help="Augmentation strength; use 'light' to match a resize+flip baseline.")
     args = ap.parse_args()
     set_seed(args.seed)
 
@@ -42,7 +44,7 @@ def main():
 
     train_ds, val_ds, c2i = get_default_dataset(
         args.dataset, root="data",
-        train_transform=get_train_transforms(args.image_size, level="medium"),
+        train_transform=get_train_transforms(args.image_size, level=args.aug_level),
         val_transform=get_val_transforms(args.image_size),
     )
     tl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
