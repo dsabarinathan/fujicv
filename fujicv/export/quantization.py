@@ -30,6 +30,8 @@ import tempfile
 from pathlib import Path
 from typing import Iterable, Optional, Set, Type
 
+import warnings
+
 import torch
 import torch.nn as nn
 
@@ -67,7 +69,9 @@ def quantize_dynamic(
     """
     layers = layers or {nn.Linear}
     model_cpu = copy.deepcopy(model).to("cpu").eval()
-    quantized = torch.ao.quantization.quantize_dynamic(model_cpu, layers, dtype=dtype)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning, module="torch.ao")
+        quantized = torch.ao.quantization.quantize_dynamic(model_cpu, layers, dtype=dtype)
     logger.info("Dynamic quantization applied to %s.", {t.__name__ for t in layers})
     return quantized
 

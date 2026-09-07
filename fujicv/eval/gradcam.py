@@ -93,7 +93,7 @@ class GradCAM:
         """
         tensor, orig_h, orig_w = self._preprocess(image, input_size)
         tensor = tensor.to(self.device)
-        tensor.requires_grad_(False)
+        tensor.requires_grad_(True)
 
         self.model.zero_grad()
         logits = self.model(tensor)
