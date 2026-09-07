@@ -1,5 +1,5 @@
 site_name: FujiCV
-site_url: https://fujicv.readthedocs.io
+site_url: https://dsabarinathan.github.io/fujicv
 site_description: Lightweight image classification & regression for PyTorch
 site_author: Sabarinathan
 repo_url: https://github.com/dsabarinathan/fujicv

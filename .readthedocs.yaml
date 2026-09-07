@@ -13,4 +13,3 @@ python:
     - requirements: docs/requirements.txt
     - method: pip
       path: .
-      extra_requirements: []    # no torch/timm — mkdocstrings uses static analysis
