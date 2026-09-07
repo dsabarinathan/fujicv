@@ -27,10 +27,9 @@ from __future__ import annotations
 import copy
 import logging
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Iterable, Optional, Set, Type
-
-import warnings
 
 import torch
 import torch.nn as nn
