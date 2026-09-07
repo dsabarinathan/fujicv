@@ -14,4 +14,4 @@
 
 ## Registry
 
-::: fujicv.utils.registry.register_loss
+::: fujicv.losses.registry.get_loss

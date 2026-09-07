@@ -12,4 +12,8 @@
 
 ## Heads
 
-::: fujicv.models.head
+::: fujicv.models.head.ClassificationHead
+
+::: fujicv.models.head.RegressionHead
+
+::: fujicv.models.head.MultiLabelHead

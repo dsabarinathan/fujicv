@@ -4,9 +4,15 @@
 
 ::: fujicv.engine.trainer.Trainer
 
+::: fujicv.engine.trainer.History
+
 ## Callbacks
 
-::: fujicv.engine.callbacks
+::: fujicv.engine.callbacks.EarlyStopping
+
+::: fujicv.engine.callbacks.CheckpointCallback
+
+::: fujicv.engine.callbacks.LRSchedulerCallback
 
 ## Logger
 
