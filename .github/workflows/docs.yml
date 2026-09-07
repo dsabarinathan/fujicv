@@ -1,3 +1,30 @@
-# Deployment is handled by Read the Docs (fujicv.readthedocs.io).
-# RTD auto-builds on every push to main via the webhook it installs at import time.
-# This file is kept as a placeholder — do not add gh-deploy here.
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install docs deps
+        run: pip install -r docs/requirements.txt
+
+      - name: Install fujicv (no heavy deps)
+        run: pip install -e "." --no-deps
+
+      - name: Deploy to GitHub Pages
+        run: mkdocs gh-deploy --force
