@@ -6,6 +6,7 @@
 [![PyPI downloads](https://img.shields.io/pypi/dm/fujicv)](https://pypi.org/project/fujicv/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green)](https://github.com/dsabarinathan/fujicv/blob/main/LICENSE)
 [![CI](https://github.com/dsabarinathan/fujicv/actions/workflows/ci.yml/badge.svg)](https://github.com/dsabarinathan/fujicv/actions)
+[![Docs](https://readthedocs.org/projects/fujicv/badge/?version=latest)](https://fujicv.readthedocs.io)
 
 ---
 

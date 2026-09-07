@@ -1,5 +1,5 @@
 site_name: FujiCV
-site_url: https://dsabarinathan.github.io/fujicv
+site_url: https://fujicv.readthedocs.io
 site_description: Lightweight image classification & regression for PyTorch
 site_author: Sabarinathan
 repo_url: https://github.com/dsabarinathan/fujicv
@@ -34,6 +34,18 @@ theme:
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            merge_init_into_class: true
 
 markdown_extensions:
   - admonition
@@ -62,7 +74,15 @@ nav:
     - Grad-CAM & Explainability: guides/explainability.md
     - Export & Deployment: guides/export.md
     - Kaggle Recipes: guides/kaggle.md
-  - API Reference: api/index.md
+  - API Reference:
+    - Overview: api/index.md
+    - Models: api/models.md
+    - Data: api/data.md
+    - Engine: api/engine.md
+    - Losses: api/losses.md
+    - Metrics: api/metrics.md
+    - Eval: api/eval.md
+    - Export: api/export.md
   - Contributing: contributing.md
   - Changelog: changelog.md
 
