@@ -1,91 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://fujicv.readthedocs.io/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/changelog/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/changelog/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/contributing/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/contributing/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/data/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/data/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/engine/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/engine/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/eval/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/eval/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/export/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/export/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/losses/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/losses/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/metrics/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/metrics/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/api/models/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/api/models/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/getting-started/configuration/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/getting-started/configuration/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/getting-started/installation/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/getting-started/installation/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/getting-started/quickstart/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/getting-started/quickstart/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/classification/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/classification/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/ddp/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/ddp/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/explainability/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/explainability/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/export/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/export/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/hpo/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/hpo/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/kaggle/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/kaggle/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/multilabel/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/multilabel/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
     <url>
-         <loc>https://fujicv.readthedocs.io/guides/regression/</loc>
+         <loc>https://dsabarinathan.github.io/fujicv/guides/regression/</loc>
          <lastmod>2026-09-07</lastmod>
     </url>
 </urlset>
